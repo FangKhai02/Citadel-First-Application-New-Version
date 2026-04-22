@@ -7,14 +7,17 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.models.user import AdminUser, AppUser
+from app.models.user_details import UserDetails
 from app.schemas.auth import (
     AdminLoginRequest,
     MessageResponse,
     MobileLoginRequest,
     RefreshRequest,
+    RegisterRequest,
     TokenResponse,
 )
 
@@ -36,6 +39,45 @@ async def mobile_login(body: MobileLoginRequest, db: AsyncSession = Depends(get_
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+
+    token_data = {"sub": str(user.id), "user_type": user.user_type, "source": "mobile"}
+    return TokenResponse(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+        user_type=user.user_type,
+        user_id=user.id,
+    )
+
+
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    summary="Register a new mobile user",
+    description="Creates an AppUser account and UserDetails stub, then returns JWT tokens.",
+)
+async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(AppUser).where(AppUser.email_address == body.email)
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists.",
+        )
+
+    user = AppUser(
+        email_address=body.email,
+        password=hash_password(body.password),
+        user_type=body.user_type,
+    )
+    db.add(user)
+    await db.flush()
+
+    details = UserDetails(app_user_id=user.id)
+    db.add(details)
+
+    await db.commit()
+    await db.refresh(user)
 
     token_data = {"sub": str(user.id), "user_type": user.user_type, "source": "mobile"}
     return TokenResponse(

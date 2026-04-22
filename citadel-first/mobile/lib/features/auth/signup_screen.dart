@@ -84,20 +84,9 @@ class _SignupScreenState extends State<SignupScreen>
 
   void _onContinue() {
     if (_selectedRole == _roleClient) {
-      context.push('/signup/client/declaration');
+      context.push('/signup/register', extra: 'CLIENT');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Continuing as ${_selectedAgency == _agencyCwp ? "CWP" : "Other Agency"} Agent…',
-            style: GoogleFonts.jost(fontSize: 13),
-          ),
-          backgroundColor: _gold.withAlpha(220),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      context.push('/signup/register', extra: 'AGENT');
     }
   }
 

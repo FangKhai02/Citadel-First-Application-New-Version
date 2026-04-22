@@ -15,11 +15,14 @@ class ApiEndpoints {
   // Signup flow
   static const String bankruptcyDeclaration = '/signup/bankruptcy-declaration';
   static const String disclaimerAcceptance  = '/signup/disclaimer-acceptance';
-  static const String trustFormB6           = '/signup/trust-form-b6';
-  static String trustFormB6Pdf(int id)      => '/signup/trust-form-b6/$id/pdf';
 
   // Identity document
   static const String presignedUrl = '/signup/presigned-url';
   static const String identityDocument = '/signup/identity-document';
   static const String ocr = '/signup/ocr';
+
+  // Face verification (eKYC)
+  static const String selfiePresignedUrl = '/signup/selfie-presigned-url';
+  static const String faceVerify = '/signup/face-verify';
+  static const String faceDetect = '/signup/face-detect';
 }

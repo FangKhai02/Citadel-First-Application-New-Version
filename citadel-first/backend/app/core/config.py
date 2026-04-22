@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     AWS_S3_BUCKET: str = ""
     AWS_REGION: str = "ap-southeast-1"
     AWS_ENDPOINT: str = ""
+    FACE_MATCH_THRESHOLD: float = 0.60
+    FACE_NET_DEVICE: str = "cpu"
 
     model_config = {"env_file": ".env"}
 

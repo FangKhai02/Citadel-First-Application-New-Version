@@ -76,3 +76,9 @@ def build_identity_doc_key(
     ts = int(time.time())
     safe_filename = filename or f"{ts}_{side}_{doc_type}"
     return f"identity-docs/{app_user_id}/{safe_filename}"
+
+
+def download_object_bytes(key: str) -> bytes:
+    """Download an object from S3 and return its bytes."""
+    response = _s3_client.get_object(Bucket=settings.AWS_S3_BUCKET, Key=key)
+    return response["Body"].read()

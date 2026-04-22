@@ -9,8 +9,9 @@ from app.core.database import Base, engine
 
 # Register all models so metadata is populated before create_all
 import app.models.user   # noqa: F401
-import app.models.signup  # noqa: F401  – registers BankruptcyDeclaration, DisclaimerAcceptance, TrustFormB6
+import app.models.signup  # noqa: F401  – registers BankruptcyDeclaration, DisclaimerAcceptance
 import app.models.user_details  # noqa: F401  – registers UserDetails
+import app.models.face_verification  # noqa: F401  – registers FaceVerification
 
 logging.basicConfig(
     level=logging.INFO,

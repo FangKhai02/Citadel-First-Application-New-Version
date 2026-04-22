@@ -13,9 +13,10 @@ const _textMuted   = Color(0xFF64748B);
 const _borderGlass = Color(0xFF1E3A5F);
 
 class SelfieInstructionScreen extends StatefulWidget {
+  final String docImageKey;
   final VoidCallback onStart;
 
-  const SelfieInstructionScreen({super.key, required this.onStart});
+  const SelfieInstructionScreen({super.key, required this.docImageKey, required this.onStart});
 
   @override
   State<SelfieInstructionScreen> createState() =>
