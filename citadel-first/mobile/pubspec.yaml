@@ -1,0 +1,65 @@
+name: citadel_first
+description: Citadel First wealth management platform.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.5
+
+  # HTTP client
+  dio: ^5.7.0
+
+  # Secure token storage
+  flutter_secure_storage: ^10.0.0
+
+  # Navigation
+  go_router: ^17.2.1
+
+  # Typography — IBM Plex Sans (fintech/banking standard)
+  google_fonts: ^8.0.2
+
+  # PDF viewer
+  flutter_pdfview: ^1.4.4
+
+  # App-accessible temp/cache directory (required for flutter_pdfview on Android)
+  path_provider: ^2.1.4
+
+  # Camera / gallery image capture
+  image_picker: ^1.1.2
+
+  # Camera preview
+  camera: ^0.11.0+2
+
+  # Image decoding / cropping (handles EXIF rotation automatically)
+  image: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/launcher/launcher_icon.png"
+  adaptive_icon_background: "#0D1B2A"
+  adaptive_icon_foreground: "assets/launcher/launcher_icon_foreground.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

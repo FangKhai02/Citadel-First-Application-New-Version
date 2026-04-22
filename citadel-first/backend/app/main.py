@@ -1,0 +1,51 @@
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.router import router
+from app.core.database import Base, engine
+
+# Register all models so metadata is populated before create_all
+import app.models.user   # noqa: F401
+import app.models.signup  # noqa: F401  – registers BankruptcyDeclaration, DisclaimerAcceptance, TrustFormB6
+import app.models.user_details  # noqa: F401  – registers UserDetails
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    async with engine.begin() as conn:
+        # Creates new tables only; existing tables are left untouched
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(
+    title="Citadel First API",
+    description="REST API for the Citadel First wealth management platform. "
+    "Swagger UI is available at /docs, ReDoc at /redoc.",
+    version="1.0.0",
+    contact={"name": "Citadel Group", "email": "dev@citadelgroup.com.my"},
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Tighten this to specific domains in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(router)
+
+
+@app.get("/health", tags=["Health"])
+async def health():
+    return {"status": "ok", "service": "citadel-first-api"}

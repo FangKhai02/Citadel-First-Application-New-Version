@@ -1,0 +1,57 @@
+# Environment & secrets
+.env
+.env.*
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+*.symbols
+*.map.json
+/android/app/debug
+/android/app/profile
+/android/app/release
+/ios/Flutter/.last_build_id
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Testing Images (large local files)
+Testing Images/
+
+# SQL scripts with potential data
+SQL Script (Old Vendor)/
+
+# Logs
+*.log
+
+# Coverage
+coverage/
