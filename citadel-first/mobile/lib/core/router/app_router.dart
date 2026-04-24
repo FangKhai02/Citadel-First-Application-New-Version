@@ -14,7 +14,15 @@ import '../../features/auth/document_upload_screen.dart';
 import '../../features/auth/document_review_screen.dart';
 import '../../features/auth/selfie_instruction_screen.dart';
 import '../../features/auth/selfie_capture_screen.dart';
+import '../../features/auth/verification_processing_screen.dart';
 import '../../features/auth/verification_result_screen.dart';
+import '../../features/auth/personal_details_screen.dart';
+import '../../features/auth/address_contact_screen.dart';
+import '../../features/auth/employment_details_screen.dart';
+import '../../features/auth/kyc_crs_screen.dart';
+import '../../features/auth/pep_declaration_screen.dart';
+import '../../features/auth/onboarding_agreement_screen.dart';
+import '../../features/auth/signup_success_screen.dart';
 import '../../features/client/dashboard/client_dashboard_screen.dart';
 import '../../features/agent/dashboard/agent_dashboard_screen.dart';
 import '../../models/document_upload.dart';
@@ -33,9 +41,17 @@ final appRouter = GoRouter(
     final onDocReview    = state.matchedLocation == '/signup/client/document-review';
     final onSelfieInst   = state.matchedLocation == '/signup/client/selfie-instruction';
     final onSelfieCapture = state.matchedLocation == '/signup/client/selfie-capture';
+    final onProcessing   = state.matchedLocation == '/signup/client/verification-processing';
     final onVerifyResult = state.matchedLocation == '/signup/client/verification-success'
                         || state.matchedLocation == '/signup/client/verification-failed';
-    final onSignupFlow = onDeclaration || onDisclaimer || onIdentity || onDocUpload || onDocReview || onSelfieInst || onSelfieCapture || onVerifyResult || state.matchedLocation == '/signup/client/document-selection' || onRegister;
+    final onPersonalDetails = state.matchedLocation == '/signup/client/personal-details';
+    final onAddressContact = state.matchedLocation == '/signup/client/address-contact';
+    final onEmploymentDetails = state.matchedLocation == '/signup/client/employment-details';
+    final onKycCrs = state.matchedLocation == '/signup/client/kyc-crs';
+    final onPepDeclaration = state.matchedLocation == '/signup/client/pep-declaration';
+    final onOnboardingAgreement = state.matchedLocation == '/signup/client/onboarding-agreement';
+    final onSignupSuccess = state.matchedLocation == '/signup/client/success';
+    final onSignupFlow = onDeclaration || onDisclaimer || onIdentity || onDocUpload || onDocReview || onSelfieInst || onSelfieCapture || onProcessing || onVerifyResult || onPersonalDetails || onAddressContact || onEmploymentDetails || onKycCrs || onPepDeclaration || onOnboardingAgreement || onSignupSuccess || state.matchedLocation == '/signup/client/document-selection' || onRegister;
 
     if (authState is AuthAuthenticated) {
       if (!onSignupFlow) {
@@ -80,20 +96,62 @@ final appRouter = GoRouter(
       final result = state.extra as DocumentUploadResult;
       return SelfieCaptureScreen(
         docImageKey: result.frontImageKey ?? '',
-        onVerificationSuccess: () => context.go('/signup/client/verification-success'),
-        onVerificationFailed: () => context.go('/signup/client/verification-failed'),
+        onUpload: (selfiePath) => context.push('/signup/client/verification-processing',
+          extra: _SelfieData(selfiePath: selfiePath, docImageKey: result.frontImageKey ?? '', docUploadResult: result)),
+        onBack: () => context.pop(),
       );
     }),
-    GoRoute(path: '/signup/client/verification-success', builder: (context, state) => VerificationResultScreen(
-      isMatch: true,
-      onContinue: () => context.go('/client/dashboard'),
-      onRetry: () => context.go('/signup/client/selfie-instruction'),
-    )),
-    GoRoute(path: '/signup/client/verification-failed', builder: (context, state) => VerificationResultScreen(
-      isMatch: false,
-      onContinue: () {}, // unused for failure
-      onRetry: () => context.go('/signup/client/selfie-instruction'),
-    )),
+    GoRoute(path: '/signup/client/verification-processing', builder: (context, state) {
+      final data = state.extra as _SelfieData;
+      return VerificationProcessingScreen(
+        selfieImagePath: data.selfiePath,
+        docImageKey: data.docImageKey,
+        docUploadResult: data.docUploadResult,
+        onSuccess: () => context.go('/signup/client/verification-success', extra: data.docUploadResult),
+        onFailure: () => context.go('/signup/client/verification-failed', extra: data.docUploadResult),
+      );
+    }),
+    GoRoute(path: '/signup/client/verification-success', builder: (context, state) {
+      final result = state.extra as DocumentUploadResult;
+      return VerificationResultScreen(
+        isMatch: true,
+        docUploadResult: result,
+        onContinue: () => context.go('/signup/client/personal-details', extra: result.ocrResult?.nationality ?? 'Malaysian'),
+        onRetry: () => context.go('/signup/client/selfie-instruction', extra: result),
+      );
+    }),
+    GoRoute(path: '/signup/client/verification-failed', builder: (context, state) {
+      final result = state.extra as DocumentUploadResult;
+      return VerificationResultScreen(
+        isMatch: false,
+        errorMessage: 'Your selfie does not match your ID photo.',
+        docUploadResult: result,
+        onContinue: () {},
+        onRetry: () => context.go('/signup/client/selfie-instruction', extra: result),
+      );
+    }),
+    GoRoute(path: '/signup/client/personal-details', builder: (context, state) {
+      final nationality = state.extra as String? ?? 'Malaysian';
+      return PersonalDetailsScreen(nationality: nationality);
+    }),
+    GoRoute(path: '/signup/client/address-contact', builder: (context, state) {
+      return const AddressContactScreen();
+    }),
+    GoRoute(path: '/signup/client/employment-details', builder: (context, state) {
+      return const EmploymentDetailsScreen();
+    }),
+    GoRoute(path: '/signup/client/kyc-crs', builder: (context, state) {
+      return const KycCrsScreen();
+    }),
+    GoRoute(path: '/signup/client/pep-declaration', builder: (context, state) {
+      return const PepDeclarationScreen();
+    }),
+    GoRoute(path: '/signup/client/onboarding-agreement', builder: (context, state) {
+      return const OnboardingAgreementScreen();
+    }),
+    GoRoute(path: '/signup/client/success', builder: (context, state) {
+      return const SignupSuccessScreen();
+    }),
     GoRoute(path: '/client/dashboard', builder: (context, state) => const ClientDashboardScreen()),
     GoRoute(path: '/agent/dashboard', builder: (context, state) => const AgentDashboardScreen()),
   ],
@@ -104,4 +162,12 @@ String _dashboardRoute(String userType) {
     'AGENT' => '/agent/dashboard',
     _ => '/client/dashboard', // CLIENT and CORPORATE both go to client dashboard
   };
+}
+
+/// Data class for passing selfie verification parameters through GoRouter.
+class _SelfieData {
+  final String selfiePath;
+  final String docImageKey;
+  final DocumentUploadResult docUploadResult;
+  const _SelfieData({required this.selfiePath, required this.docImageKey, required this.docUploadResult});
 }

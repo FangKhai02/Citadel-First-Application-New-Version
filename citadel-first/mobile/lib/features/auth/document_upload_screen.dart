@@ -663,88 +663,93 @@ class _CaptureCard extends StatelessWidget {
 
   // Compact row shown before photo is taken.
   Widget _emptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          // ID-card silhouette — communicates the expected document shape
-          Container(
-            width: 58,
-            height: 38,
-            decoration: BoxDecoration(
-              color: _cyan.withAlpha(10),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: _cyan.withAlpha(60), width: 1.2),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: _cyan.withAlpha(180), size: 15),
-                const SizedBox(height: 2),
-                Container(
-                  width: 28,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: _cyan.withAlpha(50),
-                    borderRadius: BorderRadius.circular(1),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 100),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
+        child: Row(
+          children: [
+            // ID-card silhouette — communicates the expected document shape
+            Container(
+              width: 52,
+              height: 36,
+              decoration: BoxDecoration(
+                color: _cyan.withAlpha(10),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: _cyan.withAlpha(60), width: 1.2),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: _cyan.withAlpha(180), size: 16),
+                  const SizedBox(height: 2),
+                  Container(
+                    width: 24,
+                    height: 2,
+                    decoration: BoxDecoration(
+                      color: _cyan.withAlpha(50),
+                      borderRadius: BorderRadius.circular(1),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 14),
-          // Label & instruction
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.jost(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _textHeading,
+            const SizedBox(width: 12),
+            // Label & instruction
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: GoogleFonts.jost(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: _textHeading,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Tap to photograph',
-                  style: GoogleFonts.jost(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w300,
-                    color: _textBody,
+                  const SizedBox(height: 5),
+                  Text(
+                    'Tap to photograph',
+                    style: GoogleFonts.jost(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w300,
+                      color: _textBody,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          // Camera action pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-            decoration: BoxDecoration(
-              color: _cyan.withAlpha(18),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _cyan.withAlpha(50), width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.camera_alt_outlined, color: _cyan, size: 14),
-                const SizedBox(width: 5),
-                Text(
-                  'Capture',
-                  style: GoogleFonts.jost(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _cyan,
+            const SizedBox(width: 14),
+            // Camera action pill
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: _cyan.withAlpha(18),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: _cyan.withAlpha(50), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.camera_alt_outlined, color: _cyan, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Capture',
+                    style: GoogleFonts.jost(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _cyan,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

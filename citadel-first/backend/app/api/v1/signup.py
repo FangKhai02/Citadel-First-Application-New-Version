@@ -1,5 +1,7 @@
 import asyncio
+import base64
 import logging
+import time
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -14,6 +16,8 @@ from app.core.security import decode_token
 from app.models.signup import BankruptcyDeclaration, DisclaimerAcceptance
 from app.models.user import AppUser
 from app.models.user_details import UserDetails
+from app.models.pep_declaration import PepDeclaration
+from app.models.crs_tax_residency import CrsTaxResidency
 from app.schemas.signup import (
     BankruptcyDeclarationRequest,
     BankruptcyDeclarationResponse,
@@ -31,8 +35,34 @@ from app.schemas.user_details import (
     PresignedUrlResponse,
     UserDetailsConfirmRequest,
     UserDetailsResponse,
+    PersonalDetailsRequest,
+    PersonalDetailsResponse,
+    AddressContactRequest,
+    AddressContactResponse,
+    EmploymentDetailsRequest,
+    EmploymentDetailsResponse,
+    KycRequest,
+    KycResponse,
+    OnboardingAgreementRequest,
+    OnboardingAgreementResponse,
+    SignupUserDetailsResponse,
 )
-from app.services.s3_service import build_identity_doc_key, download_object_bytes, generate_presigned_upload_url
+from app.schemas.pep_declaration import (
+    PepDeclarationRequest,
+    PepDeclarationResponse,
+)
+from app.schemas.crs_tax_residency import (
+    CrsTaxResidencyRequest,
+    CrsTaxResidencyResponse,
+    CrsTaxResidencyListResponse,
+)
+from app.services.s3_service import (
+    build_identity_doc_key,
+    download_object_bytes,
+    generate_presigned_upload_url,
+    upload_bytes_to_s3,
+)
+from app.services.pdf_service import generate_onboarding_agreement_pdf
 from app.services.ocr_service import run_ocr
 from app.services.face_verification_service import compare_faces, detect_face_count
 from app.models.face_verification import FaceVerification
@@ -479,4 +509,399 @@ async def verify_face(
         selfie_face_detected=result.selfie_face_detected,
         doc_face_detected=result.doc_face_detected,
         message=message,
+    )
+
+
+# ── Post-eKYC Information Capture Endpoints ─────────────────────────────────────
+
+async def _get_or_create_user_details(
+    db: AsyncSession, user_id: int
+) -> UserDetails:
+    """Get existing UserDetails row or create a new one for the user."""
+    result = await db.execute(
+        select(UserDetails).where(UserDetails.app_user_id == user_id)
+    )
+    record = result.scalar_one_or_none()
+    if record is None:
+        record = UserDetails(app_user_id=user_id)
+        db.add(record)
+        await db.flush()
+    return record
+
+
+@router.patch(
+    "/personal-details",
+    response_model=PersonalDetailsResponse,
+    summary="Save personal details (title, marital status, passport expiry)",
+    description="Updates user_details with personal information after eKYC verification.",
+)
+async def save_personal_details(
+    body: PersonalDetailsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    record = await _get_or_create_user_details(db, current_user.id)
+
+    if body.title is not None:
+        record.title = body.title
+    if body.marital_status is not None:
+        record.marital_status = body.marital_status
+    if body.passport_expiry is not None:
+        record.passport_expiry = body.passport_expiry
+
+    await db.commit()
+    await db.refresh(record)
+
+    logger.info(
+        "PERSONAL_DETAILS user_id=%d title=%s marital=%s",
+        current_user.id,
+        record.title,
+        record.marital_status,
+    )
+    return PersonalDetailsResponse.model_validate(record)
+
+
+@router.patch(
+    "/address-contact",
+    response_model=AddressContactResponse,
+    summary="Save address and contact details",
+    description="Updates user_details with residential/mailing address and contact information.",
+)
+async def save_address_contact(
+    body: AddressContactRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    record = await _get_or_create_user_details(db, current_user.id)
+
+    if body.residential_address is not None:
+        record.residential_address = body.residential_address
+    if body.mailing_address is not None:
+        record.mailing_address = body.mailing_address
+    if body.mailing_same_as_residential is not None:
+        record.mailing_same_as_residential = body.mailing_same_as_residential
+    if body.home_telephone is not None:
+        record.home_telephone = body.home_telephone
+    if body.mobile_number is not None:
+        record.mobile_number = body.mobile_number
+    if body.email is not None:
+        record.email = body.email
+        # Sync email to app_users if it differs from the login email
+        if body.email.lower() != current_user.email_address.lower():
+            # Check uniqueness before updating
+            existing = await db.execute(
+                select(AppUser).where(
+                    AppUser.email_address == body.email,
+                    AppUser.id != current_user.id,
+                )
+            )
+            if existing.scalars().first() is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This email is already registered to another account.",
+                )
+            current_user.email_address = body.email
+
+    await db.commit()
+    await db.refresh(record)
+
+    logger.info(
+        "ADDRESS_CONTACT user_id=%d email=%s login_email=%s",
+        current_user.id,
+        record.email,
+        current_user.email_address,
+    )
+    return AddressContactResponse.model_validate(record)
+
+
+@router.patch(
+    "/employment-details",
+    response_model=EmploymentDetailsResponse,
+    summary="Save employment and financial details",
+    description="Updates user_details with employment type, occupation, employer info, and income ranges.",
+)
+async def save_employment_details(
+    body: EmploymentDetailsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    record = await _get_or_create_user_details(db, current_user.id)
+
+    if body.employment_type is not None:
+        record.employment_type = body.employment_type
+    if body.occupation is not None:
+        record.occupation = body.occupation
+    if body.work_title is not None:
+        record.work_title = body.work_title
+    if body.nature_of_business is not None:
+        record.nature_of_business = body.nature_of_business
+    if body.employer_name is not None:
+        record.employer_name = body.employer_name
+    if body.employer_address is not None:
+        record.employer_address = body.employer_address
+    if body.employer_telephone is not None:
+        record.employer_telephone = body.employer_telephone
+    if body.annual_income_range is not None:
+        record.annual_income_range = body.annual_income_range
+    if body.estimated_net_worth is not None:
+        record.estimated_net_worth = body.estimated_net_worth
+
+    await db.commit()
+    await db.refresh(record)
+
+    logger.info(
+        "EMPLOYMENT_DETAILS user_id=%d employment_type=%s",
+        current_user.id,
+        record.employment_type,
+    )
+    return EmploymentDetailsResponse.model_validate(record)
+
+
+@router.patch(
+    "/kyc-crs",
+    response_model=KycResponse,
+    summary="Save KYC details",
+    description="Updates user_details with KYC information. CRS tax residency rows are saved separately via PUT /signup/crs-tax-residency.",
+)
+async def save_kyc(
+    body: KycRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    record = await _get_or_create_user_details(db, current_user.id)
+
+    if body.source_of_trust_fund is not None:
+        record.source_of_trust_fund = body.source_of_trust_fund
+    if body.source_of_income is not None:
+        record.source_of_income = body.source_of_income
+    if body.country_of_birth is not None:
+        record.country_of_birth = body.country_of_birth
+    if body.physically_present is not None:
+        record.physically_present = body.physically_present
+    if body.main_sources_of_income is not None:
+        record.main_sources_of_income = body.main_sources_of_income
+    if body.has_unusual_transactions is not None:
+        record.has_unusual_transactions = body.has_unusual_transactions
+    if body.marital_history is not None:
+        record.marital_history = body.marital_history
+    if body.geographical_connections is not None:
+        record.geographical_connections = body.geographical_connections
+    if body.other_relevant_info is not None:
+        record.other_relevant_info = body.other_relevant_info
+
+    await db.commit()
+    await db.refresh(record)
+
+    logger.info(
+        "KYC user_id=%d source_of_trust=%s",
+        current_user.id,
+        record.source_of_trust_fund,
+    )
+    return KycResponse.model_validate(record)
+
+
+@router.put(
+    "/crs-tax-residency",
+    response_model=CrsTaxResidencyListResponse,
+    summary="Replace CRS tax residency rows",
+    description="Deletes all existing CRS tax residency rows for the user and creates new ones. Accepts 1-5 jurisdictions.",
+)
+async def save_crs_tax_residency(
+    body: CrsTaxResidencyRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    # Validate row count
+    if len(body.residencies) < 1 or len(body.residencies) > 5:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Must provide between 1 and 5 tax residency jurisdictions.",
+        )
+
+    # Validate Reason B requires explanation
+    for row in body.residencies:
+        if row.no_tin_reason == "B" and not row.reason_b_explanation:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Reason B explanation is required for jurisdiction '{row.jurisdiction}'.",
+            )
+
+    # Delete existing rows
+    await db.execute(
+        CrsTaxResidency.__table__.delete().where(
+            CrsTaxResidency.app_user_id == current_user.id
+        )
+    )
+
+    # Create new rows
+    new_rows = []
+    for row in body.residencies:
+        record = CrsTaxResidency(
+            app_user_id=current_user.id,
+            jurisdiction=row.jurisdiction,
+            tin=row.tin,
+            no_tin_reason=row.no_tin_reason,
+            reason_b_explanation=row.reason_b_explanation,
+        )
+        db.add(record)
+        new_rows.append(record)
+
+    await db.commit()
+    for r in new_rows:
+        await db.refresh(r)
+
+    logger.info(
+        "CRS_TAX_RESIDENCY user_id=%d rows=%d",
+        current_user.id,
+        len(new_rows),
+    )
+    return CrsTaxResidencyListResponse(
+        residencies=[CrsTaxResidencyResponse.model_validate(r) for r in new_rows]
+    )
+
+
+@router.patch(
+    "/pep-declaration",
+    response_model=PepDeclarationResponse,
+    summary="Save PEP declaration",
+    description="Creates or updates the PEP (Politically Exposed Person) declaration for the current user. Stored in the user_pep_declaration table.",
+)
+async def save_pep_declaration(
+    body: PepDeclarationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    # Get existing PEP declaration or prepare a new one
+    result = await db.execute(
+        select(PepDeclaration).where(PepDeclaration.app_user_id == current_user.id)
+    )
+    record = result.scalar_one_or_none()
+
+    if record is None:
+        record = PepDeclaration(app_user_id=current_user.id, is_pep=body.is_pep)
+        db.add(record)
+    else:
+        record.is_pep = body.is_pep
+
+    if body.is_pep:
+        # Update PEP detail fields only when declaring as PEP
+        if body.pep_relationship is not None:
+            record.pep_relationship = body.pep_relationship
+        if body.pep_name is not None:
+            record.pep_name = body.pep_name
+        if body.pep_position is not None:
+            record.pep_position = body.pep_position
+        if body.pep_organisation is not None:
+            record.pep_organisation = body.pep_organisation
+        if body.pep_supporting_doc_key is not None:
+            record.pep_supporting_doc_key = body.pep_supporting_doc_key
+    else:
+        # If not PEP, clear all PEP-related fields
+        record.pep_relationship = None
+        record.pep_name = None
+        record.pep_position = None
+        record.pep_organisation = None
+        record.pep_supporting_doc_key = None
+
+    await db.commit()
+    await db.refresh(record)
+
+    logger.info(
+        "PEP_DECLARATION user_id=%d is_pep=%s relationship=%s",
+        current_user.id,
+        record.is_pep,
+        record.pep_relationship,
+    )
+    return PepDeclarationResponse.model_validate(record)
+
+
+# ── Onboarding Agreement (E-Sign) Endpoints ────────────────────────────────────
+
+
+@router.get(
+    "/user-details",
+    response_model=SignupUserDetailsResponse,
+    summary="Get current user's name and identity card number",
+    description="Returns the user's name and IC number from user_details for auto-populating the onboarding agreement.",
+)
+async def get_signup_user_details(
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    record = await _get_or_create_user_details(db, current_user.id)
+    return SignupUserDetailsResponse.model_validate(record)
+
+
+@router.patch(
+    "/onboarding-agreement",
+    response_model=OnboardingAgreementResponse,
+    summary="Sign and store onboarding agreement",
+    description="Accepts a base64-encoded signature, uploads the signature image and generated "
+    "agreement PDF to S3, and stores both S3 keys in user_details.",
+)
+async def sign_onboarding_agreement(
+    body: OnboardingAgreementRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    record = await _get_or_create_user_details(db, current_user.id)
+
+    ts = int(time.time())
+    sig_key = f"signatures/{current_user.id}/{ts}_signature.png"
+    pdf_key = f"agreements/{current_user.id}/{ts}_onboarding_agreement.pdf"
+
+    # Decode and upload signature image
+    try:
+        sig_bytes = base64.b64decode(body.signature_base64)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid base64 signature data.",
+        )
+
+    await asyncio.to_thread(
+        upload_bytes_to_s3, sig_key, sig_bytes, "image/png"
+    )
+
+    # Generate agreement PDF with embedded signature
+    date_str = datetime.now(timezone.utc).strftime("%d %B %Y")
+    try:
+        pdf_bytes = await asyncio.to_thread(
+            generate_onboarding_agreement_pdf,
+            body.full_name,
+            body.ic_number,
+            date_str,
+            body.signature_base64,
+        )
+    except RuntimeError as e:
+        logger.error("PDF generation failed for user_id=%d: %s", current_user.id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate onboarding agreement PDF.",
+        )
+
+    # Upload PDF to S3
+    await asyncio.to_thread(
+        upload_bytes_to_s3, pdf_key, pdf_bytes, "application/pdf"
+    )
+
+    # Store both S3 keys
+    record.digital_signature_key = sig_key
+    record.onboarding_agreement_key = pdf_key
+    await db.commit()
+    await db.refresh(record)
+
+    logger.info(
+        "ONBOARDING_AGREEMENT user_id=%d sig_key=%s pdf_key=%s",
+        current_user.id,
+        sig_key,
+        pdf_key,
+    )
+
+    return OnboardingAgreementResponse(
+        id=record.id,
+        app_user_id=current_user.id,
+        digital_signature_key=record.digital_signature_key,
+        onboarding_agreement_key=record.onboarding_agreement_key,
+        message="Onboarding agreement signed successfully.",
     )

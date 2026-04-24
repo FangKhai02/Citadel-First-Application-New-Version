@@ -36,6 +36,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         refreshToken: refreshToken,
         userType: userType,
         userId: userId,
+        email: event.email,
       );
 
       emit(LoginSuccess(

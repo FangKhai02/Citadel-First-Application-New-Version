@@ -25,4 +25,16 @@ class ApiEndpoints {
   static const String selfiePresignedUrl = '/signup/selfie-presigned-url';
   static const String faceVerify = '/signup/face-verify';
   static const String faceDetect = '/signup/face-detect';
+
+  // Post-eKYC information capture
+  static const String personalDetails = '/signup/personal-details';
+  static const String addressContact = '/signup/address-contact';
+  static const String employmentDetails = '/signup/employment-details';
+  static const String kycCrs = '/signup/kyc-crs';
+  static const String crsTaxResidency = '/signup/crs-tax-residency';
+  static const String pepDeclaration = '/signup/pep-declaration';
+
+  // Onboarding agreement (E-Sign)
+  static const String signupUserDetails = '/signup/user-details';
+  static const String onboardingAgreement = '/signup/onboarding-agreement';
 }

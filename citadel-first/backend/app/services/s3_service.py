@@ -78,6 +78,17 @@ def build_identity_doc_key(
     return f"identity-docs/{app_user_id}/{safe_filename}"
 
 
+def upload_bytes_to_s3(key: str, data: bytes, content_type: str = "application/pdf") -> str:
+    """Upload raw bytes to S3 and return the key."""
+    _s3_client.put_object(
+        Bucket=settings.AWS_S3_BUCKET,
+        Key=key,
+        Body=data,
+        ContentType=content_type,
+    )
+    return key
+
+
 def download_object_bytes(key: str) -> bytes:
     """Download an object from S3 and return its bytes."""
     response = _s3_client.get_object(Bucket=settings.AWS_S3_BUCKET, Key=key)

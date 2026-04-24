@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:ui';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -39,10 +41,15 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _passwordCtrl   = TextEditingController();
   final _confirmCtrl    = TextEditingController();
 
-  bool _obscurePassword = true;
-  bool _obscureConfirm  = true;
-  bool _isLoading       = false;
+  bool _obscurePassword  = true;
+  bool _obscureConfirm   = true;
+  bool _isLoading        = false;
+  bool _validatingDomain = false;
   String? _errorMessage;
+
+  static final _emailRegex = RegExp(
+    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+  );
 
   late final AnimationController _animCtrl;
   late final Animation<double>   _fadeIn;
@@ -71,6 +78,97 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  // ── Email validation ────────────────────────────────────────────────────────
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Email is required';
+    if (!_emailRegex.hasMatch(value.trim())) return 'Please enter a valid email address';
+    return null;
+  }
+
+  // ── Domain validation ──────────────────────────────────────────────────────
+
+  /// Common email provider domains that users frequently misspell.
+  static const _commonProviders = {
+    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
+    'icloud.com', 'live.com', 'aol.com', 'protonmail.com',
+    'proton.me', 'mail.com', 'zoho.com', 'yandex.com',
+  };
+
+  /// Known misspellings of common providers → correct spelling.
+  static const _typoMap = {
+    'gmial.com': 'gmail.com', 'gmai.com': 'gmail.com',
+    'gamil.com': 'gmail.com', 'gmal.com': 'gmail.com',
+    'gmaiil.com': 'gmail.com', 'gmail.con': 'gmail.com',
+    'gmail.comm': 'gmail.com', 'gmail.cpm': 'gmail.com',
+    'gnail.com': 'gmail.com',
+    'yahho.com': 'yahoo.com', 'yaho.com': 'yahoo.com',
+    'yahooo.com': 'yahoo.com', 'yahoo.con': 'yahoo.com',
+    'outlok.com': 'outlook.com', 'outloo.com': 'outlook.com',
+    'hotmai.com': 'hotmail.com', 'hotmal.com': 'hotmail.com',
+    'hotnail.com': 'hotmail.com', 'hotmail.con': 'hotmail.com',
+    'icloud.con': 'icloud.com', 'iclou.com': 'icloud.com',
+    'live.con': 'live.com',
+  };
+
+  /// Returns a correction suggestion if the domain looks like a typo
+  /// of a common provider, or null if it looks fine.
+  String? _checkDomainTypo(String domain) {
+    final lower = domain.toLowerCase();
+    // 1. Exact typo match
+    if (_typoMap.containsKey(lower)) {
+      return _typoMap[lower]!;
+    }
+    // 2. Levenshtein distance check against common providers
+    //    If edit distance is 1 or 2 and the domain is not a known provider,
+    //    suggest the closest match.
+    if (_commonProviders.contains(lower)) return null;
+    for (final provider in _commonProviders) {
+      final dist = _editDistance(lower, provider);
+      if (dist == 1) return provider;
+    }
+    return null;
+  }
+
+  /// Minimum edit distance between two strings (Levenshtein).
+  static int _editDistance(String a, String b) {
+    if (a == b) return 0;
+    if (a.isEmpty) return b.length;
+    if (b.isEmpty) return a.length;
+    final dp = List.generate(a.length + 1, (_) => List.filled(b.length + 1, 0));
+    for (int i = 0; i <= a.length; i++) dp[i][0] = i;
+    for (int j = 0; j <= b.length; j++) dp[0][j] = j;
+    for (int i = 1; i <= a.length; i++) {
+      for (int j = 1; j <= b.length; j++) {
+        final cost = a[i - 1] == b[j - 1] ? 0 : 1;
+        dp[i][j] = [
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + cost,
+        ].reduce((x, y) => x < y ? x : y);
+      }
+    }
+    return dp[a.length][b.length];
+  }
+
+  /// Checks whether the domain has valid MX (mail exchange) DNS records.
+  /// Uses Google's public DNS-over-HTTPS API.
+  Future<bool> _domainHasMxRecords(String domain) async {
+    try {
+      final uri = Uri.parse(
+        'https://dns.google/resolve?name=$domain&type=MX',
+      );
+      final response = await HttpClient().getUrl(uri);
+      final body = await response.close();
+      final jsonString = await body.transform(const Utf8Decoder()).join();
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      final answer = decoded['Answer'] as List<dynamic>?;
+      return answer != null && answer.isNotEmpty;
+    } catch (_) {
+      return true; // If DNS check fails, don't block the user
+    }
+  }
+
   // ── Password strength checks ──────────────────────────────────────────────
 
   bool get _hasMinLength   => _passwordCtrl.text.length >= 8;
@@ -90,6 +188,30 @@ class _RegisterScreenState extends State<RegisterScreen>
       return;
     }
 
+    // ── Domain validation ──────────────────────────────────────────────────────
+    // 1. Check for typos of common providers (synchronous, instant feedback)
+    final domain = _emailCtrl.text.trim().split('@').last;
+    final typoSuggestion = _checkDomainTypo(domain);
+    if (typoSuggestion != null) {
+      setState(() => _errorMessage =
+          'Did you mean $typoSuggestion? "$domain" looks like a typo.');
+      return;
+    }
+
+    // 2. Async MX record check for non-common domains
+    if (!_commonProviders.contains(domain.toLowerCase())) {
+      setState(() => _validatingDomain = true);
+      final hasMx = await _domainHasMxRecords(domain);
+      if (!mounted) return;
+      setState(() => _validatingDomain = false);
+
+      if (!hasMx) {
+        setState(() => _errorMessage =
+            'Please enter a valid email address — the domain cannot receive mail.');
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
     try {
       final res = await ApiClient().post(
@@ -106,6 +228,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         refreshToken: res.data['refresh_token'] as String,
         userType    : res.data['user_type'] as String,
         userId      : res.data['user_id'] as int,
+        email       : _emailCtrl.text.trim(),
       );
 
       if (!mounted) return;
@@ -178,12 +301,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 hint: 'you@example.com',
                                 keyboardType: TextInputType.emailAddress,
                                 prefixIcon: Icons.mail_outline_rounded,
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return 'Email is required';
-                                  final emailRe = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                                  if (!emailRe.hasMatch(v.trim())) return 'Enter a valid email address';
-                                  return null;
-                                },
+                                validator: _validateEmail,
                               ),
                               const SizedBox(height: 20),
 
@@ -252,7 +370,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                               const SizedBox(height: 8),
 
                               // CTA
-                              _CtaButton(isLoading: _isLoading, onPressed: _onContinue),
+                              _CtaButton(
+                                isLoading: _isLoading || _validatingDomain,
+                                onPressed: _validatingDomain ? () {} : _onContinue,
+                              ),
                             ],
                           ),
                         ),

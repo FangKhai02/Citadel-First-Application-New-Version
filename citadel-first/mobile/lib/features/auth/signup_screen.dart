@@ -356,11 +356,11 @@ class _HeadingSection extends StatelessWidget {
         Text(
           'Create Account',
           style: GoogleFonts.bodoniModa(
-            fontSize: 34,
+            fontSize: 30,
             fontWeight: FontWeight.w700,
             color: _textHeading,
-            letterSpacing: -0.5,
-            height: 1.1,
+            letterSpacing: -0.3,
+            height: 1.15,
           ),
         ),
         const SizedBox(height: 12),
@@ -461,7 +461,7 @@ class _RoleCard extends StatelessWidget {
                     style: GoogleFonts.jost(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w300,
-                      color: _textMuted,
+                      color: _textSub,
                       height: 1.5,
                     ),
                   ),
@@ -651,7 +651,7 @@ class _AgencyTile extends StatelessWidget {
                     style: GoogleFonts.jost(
                       fontSize: 12,
                       fontWeight: FontWeight.w300,
-                      color: _textMuted,
+                      color: _textSub,
                     ),
                   ),
                 ],

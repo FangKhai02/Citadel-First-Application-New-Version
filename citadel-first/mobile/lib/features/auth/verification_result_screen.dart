@@ -1,31 +1,32 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/document_upload.dart';
 import 'widgets/signup_progress_bar.dart' show SignupProgressBar;
 
 // ── Brand tokens ─────────────────────────────────────────────────────────────
-const _bgPrimary   = Color(0xFF0C1829);
-const _cyan        = Color(0xFF29ABE2);
-const _cyanDim     = Color(0xFF1A7BA8);
-const _textHeading = Color(0xFFE2E8F0);
-const _textBody    = Color(0xFFCBD5E1);
-const _textMuted   = Color(0xFF64748B);
-const _borderGlass = Color(0xFF1E3A5F);
+const _bgPrimary    = Color(0xFF0C1829);
+const _cyan         = Color(0xFF29ABE2);
+const _cyanDim      = Color(0xFF1A7BA8);
+const _textHeading  = Color(0xFFE2E8F0);
+const _textBody     = Color(0xFFCBD5E1);
+const _textMuted    = Color(0xFF64748B);
+const _borderGlass  = Color(0xFF1E3A5F);
 const _successGreen = Color(0xFF22C55E);
-const _errorRed    = Color(0xFFEF4444);
+const _errorRed     = Color(0xFFEF4444);
 
 class VerificationResultScreen extends StatefulWidget {
   final bool isMatch;
-  final double? confidence;
-  final String? message;
+  final String? errorMessage;
+  final DocumentUploadResult docUploadResult;
   final VoidCallback onContinue;
   final VoidCallback onRetry;
 
   const VerificationResultScreen({
     super.key,
     required this.isMatch,
-    this.confidence,
-    this.message,
+    required this.docUploadResult,
+    this.errorMessage,
     required this.onContinue,
     required this.onRetry,
   });
@@ -40,6 +41,7 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeIn;
   late final Animation<Offset> _slideUp;
+  late final Animation<double> _iconScale;
 
   @override
   void initState() {
@@ -51,6 +53,12 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
     _fadeIn = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _slideUp = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
+    _iconScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animCtrl,
+        curve: const Interval(0.2, 0.7, curve: Curves.elasticOut),
+      ),
+    );
   }
 
   @override
@@ -62,56 +70,39 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
   @override
   Widget build(BuildContext context) {
     final isSuccess = widget.isMatch;
-    return Scaffold(
-      backgroundColor: _bgPrimary,
-      body: Stack(
-        children: [
-          const _PageBackground(),
-          SafeArea(
-            child: FadeTransition(
-              opacity: _fadeIn,
-              child: SlideTransition(
-                position: _slideUp,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _TopBar(onBack: () => Navigator.of(context).pop()),
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: _bgPrimary,
+        body: Stack(
+          children: [
+            const _PageBackground(),
+            SafeArea(
+              child: FadeTransition(
+                opacity: _fadeIn,
+                child: SlideTransition(
+                  position: _slideUp,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!isSuccess) _TopBar(onBack: () => Navigator.of(context).pop()),
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+                        padding: EdgeInsets.fromLTRB(24, isSuccess ? 60 : 0, 24, 48),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SignupProgressBar(currentStep: 3),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 28),
 
-                            // Result icon
+                            // Result icon with scale animation
                             Center(
-                              child: Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isSuccess
-                                      ? _successGreen.withAlpha(20)
-                                      : _errorRed.withAlpha(20),
-                                  border: Border.all(
-                                    color: isSuccess
-                                        ? _successGreen.withAlpha(80)
-                                        : _errorRed.withAlpha(80),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Icon(
-                                  isSuccess
-                                      ? Icons.check_rounded
-                                      : Icons.close_rounded,
-                                  color: isSuccess ? _successGreen : _errorRed,
-                                  size: 40,
-                                ),
+                              child: ScaleTransition(
+                                scale: _iconScale,
+                                child: _ResultIcon(isSuccess: isSuccess),
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 24),
 
                             // Title
                             Center(
@@ -129,14 +120,15 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
 
                             // Description
                             Center(
                               child: Text(
                                 isSuccess
-                                    ? 'Your selfie has been successfully matched with your ID document. You can proceed with your application.'
-                                    : (widget.message ?? 'We could not verify your identity. Please try again or contact support.'),
+                                    ? 'Your identity has been verified successfully. Please log in to continue with your application.'
+                                    : (widget.errorMessage ??
+                                        'Your selfie does not match your ID photo.'),
                                 style: GoogleFonts.jost(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w300,
@@ -146,19 +138,21 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 24),
 
-                            // Confidence card (if available)
-                            if (widget.confidence != null) ...[
-                              _ConfidenceCard(
-                                confidence: widget.confidence!,
-                                isMatch: isSuccess,
+                            // Error detail card (failure only)
+                            if (!isSuccess) ...[
+                              _ErrorDetailCard(
+                                message: widget.errorMessage ??
+                                    'Your selfie does not match your ID photo.',
                               ),
+                              const SizedBox(height: 12),
+                              _TipsCard(),
                               const SizedBox(height: 32),
                             ] else
                               const SizedBox(height: 32),
 
-                            // CTA button
+                            // CTA buttons
                             if (isSuccess) ...[
                               _GradientButton(
                                 label: 'Continue',
@@ -174,9 +168,7 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
                               const SizedBox(height: 10),
                               Center(
                                 child: TextButton(
-                                  onPressed: () {
-                                    // TODO: contact support
-                                  },
+                                  onPressed: () {},
                                   child: Text(
                                     'Contact Support',
                                     style: GoogleFonts.jost(
@@ -199,27 +191,58 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
           ),
         ],
       ),
+    ),
     );
   }
 }
 
-// ── Confidence card ──────────────────────────────────────────────────────────
+// ── Result icon ──────────────────────────────────────────────────────────────
 
-class _ConfidenceCard extends StatelessWidget {
-  final double confidence;
-  final bool isMatch;
-
-  const _ConfidenceCard({required this.confidence, required this.isMatch});
+class _ResultIcon extends StatelessWidget {
+  final bool isSuccess;
+  const _ResultIcon({required this.isSuccess});
 
   @override
   Widget build(BuildContext context) {
-    final percentage = (confidence * 100).toStringAsFixed(1);
+    final color = isSuccess ? _successGreen : _errorRed;
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withAlpha(20),
+        border: Border.all(color: color.withAlpha(80), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withAlpha(30),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Icon(
+        isSuccess ? Icons.check_rounded : Icons.close_rounded,
+        color: color,
+        size: 42,
+      ),
+    );
+  }
+}
+
+// ── Error detail card ────────────────────────────────────────────────────────
+
+class _ErrorDetailCard extends StatelessWidget {
+  final String message;
+  const _ErrorDetailCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(6),
+        color: _errorRed.withAlpha(18),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _borderGlass.withAlpha(45), width: 1),
+        border: Border.all(color: _errorRed.withAlpha(75), width: 1),
       ),
       child: Row(
         children: [
@@ -227,16 +250,13 @@ class _ConfidenceCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: (isMatch ? _successGreen : _errorRed).withAlpha(15),
+              color: _errorRed.withAlpha(15),
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                color: (isMatch ? _successGreen : _errorRed).withAlpha(40),
-                width: 1,
-              ),
+              border: Border.all(color: _errorRed.withAlpha(40), width: 1),
             ),
-            child: Icon(
-              isMatch ? Icons.verified_outlined : Icons.warning_amber_rounded,
-              color: isMatch ? _successGreen : _errorRed,
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: _errorRed,
               size: 20,
             ),
           ),
@@ -246,7 +266,7 @@ class _ConfidenceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Match Confidence',
+                  'Face Mismatch',
                   style: GoogleFonts.jost(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -256,7 +276,7 @@ class _ConfidenceCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$percentage% similarity score',
+                  message,
                   style: GoogleFonts.jost(
                     fontSize: 13,
                     fontWeight: FontWeight.w300,
@@ -267,14 +287,83 @@ class _ConfidenceCard extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            '$percentage%',
-            style: GoogleFonts.jost(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isMatch ? _successGreen : _errorRed,
-            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Tips card ────────────────────────────────────────────────────────────────
+
+class _TipsCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final tips = [
+      'Ensure your face is clearly visible',
+      'Take the selfie in a well-lit area',
+      'Remove sunglasses or face coverings',
+      'Hold your phone at eye level',
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(6),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _borderGlass.withAlpha(45), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _cyan.withAlpha(15),
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(color: _cyan.withAlpha(40), width: 1),
+                ),
+                child: const Icon(
+                  Icons.lightbulb_outline_rounded,
+                  color: _cyan,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                'Tips for a Better Selfie',
+                style: GoogleFonts.jost(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _textHeading,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
+          ...tips.map((tip) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_outline_rounded,
+                    size: 16, color: _cyan.withAlpha(180)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    tip,
+                    style: GoogleFonts.jost(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w300,
+                      color: _textBody,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
         ],
       ),
     );

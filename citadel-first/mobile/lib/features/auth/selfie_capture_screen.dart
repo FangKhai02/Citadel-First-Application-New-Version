@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/face_verification_service.dart';
 import 'widgets/signup_progress_bar.dart' show SignupProgressBar;
 
 // ── Brand tokens ─────────────────────────────────────────────────────────────
@@ -15,14 +14,14 @@ const _borderGlass = Color(0xFF1E3A5F);
 
 class SelfieCaptureScreen extends StatefulWidget {
   final String docImageKey;
-  final VoidCallback onVerificationSuccess;
-  final VoidCallback onVerificationFailed;
+  final void Function(String selfieImagePath) onUpload;
+  final VoidCallback onBack;
 
   const SelfieCaptureScreen({
     super.key,
     required this.docImageKey,
-    required this.onVerificationSuccess,
-    required this.onVerificationFailed,
+    required this.onUpload,
+    required this.onBack,
   });
 
   @override
@@ -36,21 +35,21 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
   String? _cameraError;
 
   XFile? _capturedImage;
-  bool _isUploading = false;
-  bool _isVerifying = false;
-  String? _error;
 
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeIn;
+  late final Animation<Offset> _slideUp;
 
   @override
   void initState() {
     super.initState();
     _animCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
     )..forward();
     _fadeIn = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _slideUp = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
     _initCamera();
   }
 
@@ -97,66 +96,12 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
   }
 
   void _retakePhoto() {
-    setState(() {
-      _capturedImage = null;
-      _error = null;
-    });
+    setState(() => _capturedImage = null);
   }
 
-  Future<void> _confirmAndVerify() async {
+  void _onUploadTapped() {
     if (_capturedImage == null) return;
-    final file = File(_capturedImage!.path);
-
-    setState(() {
-      _isUploading = true;
-      _error = null;
-    });
-
-    try {
-      final svc = FaceVerificationService();
-
-      // 1. Get presigned URL
-      final presigned = await svc.getSelfiePresignedUrl(
-        filename: 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-      final uploadUrl = presigned['upload_url']!;
-      final selfieKey = presigned['key']!;
-
-      // 2. Upload to S3
-      await svc.uploadSelfieToS3(file, uploadUrl);
-
-      setState(() {
-        _isUploading = false;
-        _isVerifying = true;
-      });
-
-      // 3. Face verification
-      final result = await svc.verifyFace(
-        selfieImageKey: selfieKey,
-        docImageKey: widget.docImageKey,
-      );
-
-      setState(() => _isVerifying = false);
-
-      if (result.isMatch) {
-        widget.onVerificationSuccess();
-      } else {
-        if (!result.selfieFaceDetected) {
-          setState(() => _error = 'No face detected in your selfie. Please retake.');
-        } else if (!result.docFaceDetected) {
-          setState(() => _error = 'No face detected in your ID document. Please contact support.');
-        } else {
-          setState(() => _error = 'Verification failed. Your selfie does not match your ID photo.');
-        }
-      }
-    } catch (e) {
-      debugPrint('[SelfieCapture] Verification error: $e');
-      setState(() {
-        _isUploading = false;
-        _isVerifying = false;
-        _error = 'Error: $e';
-      });
-    }
+    widget.onUpload(_capturedImage!.path);
   }
 
   @override
@@ -169,15 +114,18 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
           SafeArea(
             child: FadeTransition(
               opacity: _fadeIn,
-              child: Column(
-                children: [
-                  _TopBar(onBack: () => Navigator.of(context).pop()),
-                  Expanded(
-                    child: _capturedImage != null
-                        ? _buildPreview()
-                        : _buildCameraView(),
-                  ),
-                ],
+              child: SlideTransition(
+                position: _slideUp,
+                child: Column(
+                  children: [
+                    _TopBar(onBack: widget.onBack),
+                    Expanded(
+                      child: _capturedImage != null
+                          ? _buildPreview()
+                          : _buildCameraView(),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -185,6 +133,8 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
       ),
     );
   }
+
+  // ── Camera view (before capture) ──────────────────────────────────────────
 
   Widget _buildCameraView() {
     return Column(
@@ -225,7 +175,6 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Camera preview
               if (_isCameraReady && _cameraController != null)
                 ClipRect(
                   child: FittedBox(
@@ -261,16 +210,10 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
                 const Center(
                   child: CircularProgressIndicator(color: _cyan),
                 ),
-              // Face oval overlay
               const _FaceOvalOverlay(),
             ],
           ),
         ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _ErrorBanner(message: _error!),
-          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: _CaptureButton(onCapture: _capturePhoto),
@@ -278,6 +221,8 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
       ],
     );
   }
+
+  // ── Confirm preview (after capture) ───────────────────────────────────────
 
   Widget _buildPreview() {
     return Column(
@@ -300,79 +245,32 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: _cyan.withAlpha(60), width: 1.5),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(19),
-                child: Image.file(
-                  File(_capturedImage!.path),
-                  fit: BoxFit.cover,
-                ),
-              ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Make sure your face is clearly visible and well-lit.',
+            style: GoogleFonts.jost(
+              fontSize: 14,
+              fontWeight: FontWeight.w300,
+              color: _textMuted,
+              height: 1.6,
             ),
           ),
         ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-            child: _ErrorBanner(message: _error!),
+        const SizedBox(height: 28),
+        // Circular selfie preview
+        Expanded(
+          child: Center(
+            child: _CircularSelfiePreview(imagePath: _capturedImage!.path),
           ),
+        ),
+        // Action buttons
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: _isUploading || _isVerifying
-              ? _buildLoadingButton()
-              : _buildConfirmButtons(),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: _buildConfirmButtons(),
         ),
       ],
-    );
-  }
-
-  Widget _buildLoadingButton() {
-    final label = _isVerifying ? 'Verifying your identity...' : 'Uploading selfie...';
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2E6DA4), Color(0xFF1B4F7A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: GoogleFonts.jost(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -380,6 +278,7 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Primary CTA: Upload
         SizedBox(
           width: double.infinity,
           height: 54,
@@ -400,7 +299,7 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
               ],
             ),
             child: ElevatedButton(
-              onPressed: _confirmAndVerify,
+              onPressed: _onUploadTapped,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
@@ -412,7 +311,7 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Verify Identity',
+                    'Upload',
                     style: GoogleFonts.jost(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -421,7 +320,7 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.verified_user_outlined,
+                  const Icon(Icons.cloud_upload_outlined,
                       size: 17, color: Colors.white),
                 ],
               ),
@@ -429,6 +328,7 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
           ),
         ),
         const SizedBox(height: 10),
+        // Secondary: Retake
         SizedBox(
           width: double.infinity,
           height: 44,
@@ -457,6 +357,48 @@ class _SelfieCaptureScreenState extends State<SelfieCaptureScreen>
   }
 }
 
+// ── Circular selfie preview with glow ──────────────────────────────────────
+
+class _CircularSelfiePreview extends StatelessWidget {
+  final String imagePath;
+  const _CircularSelfiePreview({required this.imagePath});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 240,
+      height: 240,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [_cyan.withAlpha(25), Colors.transparent],
+          stops: const [0.7, 1.0],
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: _cyan.withAlpha(90), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: _cyan.withAlpha(40),
+              blurRadius: 24,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: Image.file(
+            File(imagePath),
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Face oval overlay ──────────────────────────────────────────────────────────
 
 class _FaceOvalOverlay extends StatelessWidget {
@@ -478,7 +420,6 @@ class _FaceOvalPainter extends CustomPainter {
     final ovalWidth = size.width * 0.65;
     final ovalHeight = ovalWidth * 1.35;
 
-    // Dark overlay with oval cutout
     final overlayPath = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
     final ovalRect = Rect.fromCenter(
@@ -494,7 +435,6 @@ class _FaceOvalPainter extends CustomPainter {
       Paint()..color = Colors.black.withAlpha(140),
     );
 
-    // Oval border
     final borderPaint = Paint()
       ..color = _cyan.withAlpha(120)
       ..style = PaintingStyle.stroke
@@ -564,37 +504,6 @@ class _TopBar extends StatelessWidget {
                 color: _textHeading,
                 size: 17,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Error banner ───────────────────────────────────────────────────────────────
-
-class _ErrorBanner extends StatelessWidget {
-  final String message;
-  const _ErrorBanner({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.withAlpha(20),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withAlpha(60)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: GoogleFonts.jost(fontSize: 12, color: Colors.red.shade300),
             ),
           ),
         ],
