@@ -888,6 +888,10 @@ async def sign_onboarding_agreement(
     # Store both S3 keys
     record.digital_signature_key = sig_key
     record.onboarding_agreement_key = pdf_key
+
+    # Mark signup as complete
+    current_user.signup_completed_at = datetime.now(timezone.utc)
+
     await db.commit()
     await db.refresh(record)
 

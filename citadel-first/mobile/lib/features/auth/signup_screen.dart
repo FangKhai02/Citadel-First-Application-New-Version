@@ -83,11 +83,29 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   void _onContinue() {
-    if (_selectedRole == _roleClient) {
-      context.push('/signup/register', extra: 'CLIENT');
-    } else {
-      context.push('/signup/register', extra: 'AGENT');
+    if (_selectedRole == _roleAgent) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(children: [
+            const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Agent registration is coming soon. Please select "I\'m a Client" to continue.',
+                style: GoogleFonts.jost(fontSize: 13, fontWeight: FontWeight.w400),
+              ),
+            ),
+          ]),
+          backgroundColor: const Color(0xFFE67E22),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
     }
+    context.push('/signup/register', extra: 'CLIENT');
   }
 
   @override

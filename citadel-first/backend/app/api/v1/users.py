@@ -46,10 +46,16 @@ async def get_me(current: tuple = Depends(get_current_user)):
     user, user_type = current
     email = getattr(user, "email_address", None) or getattr(user, "email", "")
     name = getattr(user, "name", None)
+    signup_completed = (
+        user.signup_completed_at is not None
+        if isinstance(user, AppUser)
+        else True  # AdminUser — signup doesn't apply
+    )
     return MeResponse(
         id=user.id,
         email=email,
         user_type=user_type,
         name=name,
+        signup_completed=signup_completed,
         created_at=user.created_at,
     )

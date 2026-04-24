@@ -46,8 +46,15 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         refreshToken: refreshToken,
       ));
     } on DioException catch (e) {
-      final detail = e.response?.data?['detail'] ?? 'Login failed. Please try again.';
-      emit(LoginFailure(detail.toString()));
+      final statusCode = e.response?.statusCode;
+      final detail = e.response?.data?['detail']?.toString() ??
+          'Login failed. Please try again.';
+
+      if (statusCode == 404) {
+        emit(LoginFailure(detail, emailNotRegistered: true));
+      } else {
+        emit(LoginFailure(detail));
+      }
     } catch (_) {
       emit(const LoginFailure('An unexpected error occurred.'));
     }

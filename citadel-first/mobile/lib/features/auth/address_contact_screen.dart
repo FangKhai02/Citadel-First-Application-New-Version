@@ -249,8 +249,9 @@ class _AddressContactScreenState extends State<AddressContactScreen>
                   ),
                   child: Text(
                     'Keep Original',
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.jost(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -267,8 +268,9 @@ class _AddressContactScreenState extends State<AddressContactScreen>
                   ),
                   child: Text(
                     'Change Email',
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.jost(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -339,6 +341,7 @@ class _AddressContactScreenState extends State<AddressContactScreen>
                                     const SizedBox(height: 16),
                                     Text(
                                       'Address & Contact',
+                                      textAlign: TextAlign.center,
                                       style: GoogleFonts.bodoniModa(
                                         fontSize: 30,
                                         fontWeight: FontWeight.w700,

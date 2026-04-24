@@ -94,19 +94,41 @@ class _LoginViewState extends State<_LoginView>
           );
           context.go(state.userType == 'AGENT' ? '/agent/dashboard' : '/client/dashboard');
         } else if (state is LoginFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(children: [
-                const Icon(Icons.error_outline, color: Colors.white, size: 16),
-                const SizedBox(width: 8),
-                Expanded(child: Text(state.message, style: ibm(fontSize: 13))),
-              ]),
-              backgroundColor: _errorRed,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
+          if (state.emailNotRegistered) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(children: [
+                  const Icon(Icons.person_add_outlined, color: Colors.white, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(state.message, style: ibm(fontSize: 13))),
+                ]),
+                backgroundColor: const Color(0xFFE67E22),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 6),
+                action: SnackBarAction(
+                  label: 'Sign Up',
+                  textColor: Colors.white,
+                  onPressed: () => context.push('/signup'),
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(children: [
+                  const Icon(Icons.error_outline, color: Colors.white, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(state.message, style: ibm(fontSize: 13))),
+                ]),
+                backgroundColor: _errorRed,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(16),
+              ),
+            );
+          }
         }
       },
       child: Scaffold(

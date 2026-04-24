@@ -438,6 +438,7 @@ class _OnboardingAgreementScreenState extends State<OnboardingAgreementScreen>
                                     const SizedBox(height: 18),
                                     Text(
                                       'Onboarding Agreement',
+                                      textAlign: TextAlign.center,
                                       style: GoogleFonts.bodoniModa(
                                         fontSize: 30,
                                         fontWeight: FontWeight.w700,
@@ -449,10 +450,11 @@ class _OnboardingAgreementScreenState extends State<OnboardingAgreementScreen>
                                     const SizedBox(height: 8),
                                     Text(
                                       'Please read and accept the terms before signing',
+                                      textAlign: TextAlign.center,
                                       style: GoogleFonts.jost(
                                         fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: _textBody,
+                                        fontWeight: FontWeight.w300,
+                                        color: _textMuted,
                                         height: 1.6,
                                       ),
                                     ),

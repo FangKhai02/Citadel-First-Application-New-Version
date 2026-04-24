@@ -15,9 +15,14 @@ class AuthInitial extends AuthState {
 class AuthAuthenticated extends AuthState {
   final String userType; // CLIENT | AGENT | CORPORATE | ADMIN
   final int userId;
-  const AuthAuthenticated({required this.userType, required this.userId});
+  final bool signupCompleted;
+  const AuthAuthenticated({
+    required this.userType,
+    required this.userId,
+    this.signupCompleted = true,
+  });
   @override
-  List<Object?> get props => [userType, userId];
+  List<Object?> get props => [userType, userId, signupCompleted];
 }
 
 /// No valid token — show login screen.

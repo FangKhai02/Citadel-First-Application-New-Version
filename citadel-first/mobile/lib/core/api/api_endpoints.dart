@@ -37,4 +37,7 @@ class ApiEndpoints {
   // Onboarding agreement (E-Sign)
   static const String signupUserDetails = '/signup/user-details';
   static const String onboardingAgreement = '/signup/onboarding-agreement';
+
+  // Auth
+  static const String incompleteSignup = '/auth/incomplete-signup';
 }

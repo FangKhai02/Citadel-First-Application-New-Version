@@ -31,7 +31,8 @@ class LoginSuccess extends LoginState {
 
 class LoginFailure extends LoginState {
   final String message;
-  const LoginFailure(this.message);
+  final bool emailNotRegistered;
+  const LoginFailure(this.message, {this.emailNotRegistered = false});
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, emailNotRegistered];
 }

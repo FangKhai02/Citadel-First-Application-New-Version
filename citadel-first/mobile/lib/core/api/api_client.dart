@@ -28,6 +28,7 @@ class ApiClient {
   Future<Response> get(String path) => _dio.get(path);
   Future<Response> patch(String path, {dynamic data}) => _dio.patch(path, data: data);
   Future<Response> put(String path, {dynamic data, Options? options}) => _dio.put(path, data: data, options: options);
+  Future<Response> delete(String path) => _dio.delete(path);
 }
 
 class _AuthInterceptor extends Interceptor {

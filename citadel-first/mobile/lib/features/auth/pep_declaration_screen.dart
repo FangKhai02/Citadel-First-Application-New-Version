@@ -266,6 +266,7 @@ class _PepDeclarationScreenState extends State<PepDeclarationScreen>
                                     const SizedBox(height: 18),
                                     Text(
                                       'PEP Declaration',
+                                      textAlign: TextAlign.center,
                                       style: GoogleFonts.bodoniModa(
                                         fontSize: 30,
                                         fontWeight: FontWeight.w700,
@@ -277,10 +278,11 @@ class _PepDeclarationScreenState extends State<PepDeclarationScreen>
                                     const SizedBox(height: 8),
                                     Text(
                                       'Are you a politically exposed person? (PEP)',
+                                      textAlign: TextAlign.center,
                                       style: GoogleFonts.jost(
                                         fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: _textBody,
+                                        fontWeight: FontWeight.w300,
+                                        color: _textMuted,
                                         height: 1.6,
                                       ),
                                     ),

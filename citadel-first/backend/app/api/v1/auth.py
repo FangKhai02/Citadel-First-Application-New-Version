@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +13,10 @@ from app.core.security import (
 )
 from app.models.user import AdminUser, AppUser
 from app.models.user_details import UserDetails
+from app.models.signup import BankruptcyDeclaration, DisclaimerAcceptance
+from app.models.pep_declaration import PepDeclaration
+from app.models.crs_tax_residency import CrsTaxResidency
+from app.models.face_verification import FaceVerification
 from app.schemas.auth import (
     AdminLoginRequest,
     MessageResponse,
@@ -34,7 +39,13 @@ async def mobile_login(body: MobileLoginRequest, db: AsyncSession = Depends(get_
     )
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(body.password, user.password):
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email is not registered. Please proceed to sign up.",
+        )
+
+    if not verify_password(body.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -147,3 +158,82 @@ async def logout():
     # JWT is stateless — client must discard tokens on their end.
     # For server-side revocation, store token JTI in a blocklist table.
     return MessageResponse(message="Logged out successfully")
+
+
+_bearer = HTTPBearer()
+
+
+@router.delete(
+    "/incomplete-signup",
+    response_model=MessageResponse,
+    summary="Delete incomplete signup data",
+    description="Deletes all signup-related records and the user account when signup has not been completed. "
+    "The client must discard stored tokens after calling this endpoint.",
+)
+async def delete_incomplete_signup(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+):
+    payload = decode_token(credentials.credentials)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    user_id = int(payload["sub"])
+    result = await db.execute(
+        select(AppUser).where(AppUser.id == user_id, AppUser.is_deleted == 0)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    if user.signup_completed_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete a user whose signup is already completed.",
+        )
+
+    # Delete all signup-related rows (no FK constraints, order doesn't matter)
+    await db.execute(
+        BankruptcyDeclaration.__table__.delete().where(
+            BankruptcyDeclaration.user_id == user_id
+        )
+    )
+    await db.execute(
+        DisclaimerAcceptance.__table__.delete().where(
+            DisclaimerAcceptance.user_id == user_id
+        )
+    )
+    await db.execute(
+        CrsTaxResidency.__table__.delete().where(
+            CrsTaxResidency.app_user_id == user_id
+        )
+    )
+    await db.execute(
+        PepDeclaration.__table__.delete().where(
+            PepDeclaration.app_user_id == user_id
+        )
+    )
+    await db.execute(
+        FaceVerification.__table__.delete().where(
+            FaceVerification.app_user_id == user_id
+        )
+    )
+    await db.execute(
+        UserDetails.__table__.delete().where(UserDetails.app_user_id == user_id)
+    )
+
+    # Delete the user account itself
+    await db.execute(AppUser.__table__.delete().where(AppUser.id == user_id))
+
+    await db.commit()
+
+    return MessageResponse(
+        message="Incomplete signup data deleted successfully. Please re-register."
+    )

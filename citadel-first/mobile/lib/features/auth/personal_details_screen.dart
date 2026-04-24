@@ -162,7 +162,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen>
                   children: [
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+                        padding: const EdgeInsets.fromLTRB(24, 40, 24, 48),
                         child: Form(
                           key: _formKey,
                           child: Column(
@@ -202,6 +202,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen>
                                     const SizedBox(height: 16),
                                     Text(
                                       'Personal Details',
+                                      textAlign: TextAlign.center,
                                       style: GoogleFonts.bodoniModa(
                                         fontSize: 30,
                                         fontWeight: FontWeight.w700,

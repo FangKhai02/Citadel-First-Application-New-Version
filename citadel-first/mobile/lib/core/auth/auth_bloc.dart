@@ -27,11 +27,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
 
     try {
-      // Verify token is still valid by calling /users/me
       final res = await _api.get(ApiEndpoints.me);
       final userType = res.data['user_type'] as String;
       final userId = res.data['id'] as int;
-      emit(AuthAuthenticated(userType: userType, userId: userId));
+      final signupCompleted = res.data['signup_completed'] as bool? ?? true;
+
+      if (!signupCompleted) {
+        // Incomplete signup — clean up and force re-registration
+        try {
+          await _api.delete(ApiEndpoints.incompleteSignup);
+        } catch (_) {}
+        await SecureStorage.clearAll();
+        emit(const AuthUnauthenticated());
+        return;
+      }
+
+      emit(AuthAuthenticated(
+        userType: userType,
+        userId: userId,
+        signupCompleted: signupCompleted,
+      ));
     } catch (_) {
       await SecureStorage.clearAll();
       emit(const AuthUnauthenticated());
@@ -42,7 +57,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginSucceeded event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthAuthenticated(userType: event.userType, userId: event.userId));
+    emit(AuthAuthenticated(
+      userType: event.userType,
+      userId: event.userId,
+    ));
   }
 
   Future<void> _onLogoutRequested(
