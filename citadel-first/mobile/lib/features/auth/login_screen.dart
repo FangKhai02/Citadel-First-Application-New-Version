@@ -102,16 +102,11 @@ class _LoginViewState extends State<_LoginView>
                   const SizedBox(width: 10),
                   Expanded(child: Text(state.message, style: ibm(fontSize: 13))),
                 ]),
-                backgroundColor: const Color(0xFFE67E22),
+                backgroundColor: _errorRed,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 margin: const EdgeInsets.all(16),
-                duration: const Duration(seconds: 6),
-                action: SnackBarAction(
-                  label: 'Sign Up',
-                  textColor: Colors.white,
-                  onPressed: () => context.push('/signup'),
-                ),
+                duration: const Duration(seconds: 5),
               ),
             );
           } else {

@@ -91,12 +91,12 @@ class _SignupScreenState extends State<SignupScreen>
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Agent registration is coming soon. Please select "I\'m a Client" to continue.',
+                'Agent registration is coming soon.',
                 style: GoogleFonts.jost(fontSize: 13, fontWeight: FontWeight.w400),
               ),
             ),
           ]),
-          backgroundColor: const Color(0xFFE67E22),
+          backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
