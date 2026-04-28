@@ -13,13 +13,20 @@ _jinja_env = Environment(
 )
 
 
+def _logo_url() -> str:
+    return f"{settings.BACKEND_URL}/static/citadel-logo.png"
+
+
 async def send_verification_email(to_email: str, token: str) -> None:
     verification_url = (
         f"{settings.BACKEND_URL}/api/v1/auth/verify-email?token={token}"
     )
 
     template = _jinja_env.get_template("verification_email.html")
-    html_body = template.render(verification_url=verification_url)
+    html_body = template.render(
+        verification_url=verification_url,
+        logo_url=_logo_url(),
+    )
 
     payload = {
         "from": settings.EMAIL_FROM,

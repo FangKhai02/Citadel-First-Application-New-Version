@@ -5,45 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verify Your Email — Citadel</title>
 <style>
-  body { margin: 0; padding: 0; background-color: #0C1829; font-family: 'Segoe UI', Arial, sans-serif; }
-  .container { max-width: 560px; margin: 40px auto; background-color: #0F172A; border-radius: 16px; border: 1px solid #1E3A5F; overflow: hidden; }
-  .header { padding: 32px 40px 0; text-align: center; }
-  .header h1 { color: #E2E8F0; font-size: 24px; font-weight: 700; margin: 0 0 8px; }
-  .header p { color: #94A3B8; font-size: 15px; line-height: 1.6; margin: 0; }
+  body { margin: 0; padding: 0; background-color: #080E1A; font-family: 'Segoe UI', Arial, sans-serif; }
+  .outer { width: 100%; padding: 48px 0; background-color: #080E1A; }
+  .container { max-width: 520px; margin: 0 auto; background-color: #0F172A; border-radius: 20px; border: 1px solid rgba(41,171,226,0.15); overflow: hidden; }
+  .logo-area { padding: 40px 40px 0; text-align: center; }
+  .logo-area img { width: 72px; height: 72px; }
+  .header { padding: 20px 40px 0; text-align: center; }
+  .header h1 { color: #E2E8F0; font-size: 26px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.02em; }
+  .header p { color: #94A3B8; font-size: 15px; line-height: 1.7; margin: 0; }
   .body { padding: 32px 40px; text-align: center; }
-  .btn { display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #2E6DA4, #1B4F7A); color: #FFFFFF; text-decoration: none; border-radius: 14px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
-  .fallback { margin-top: 24px; padding: 16px; background-color: rgba(255,255,255,0.04); border-radius: 10px; border: 1px solid #1E3A5F; }
-  .fallback p { color: #64748B; font-size: 13px; line-height: 1.5; margin: 0; word-break: break-all; }
-  .fallback a { color: #29ABE2; }
-  .note { padding: 0 40px 32px; text-align: center; }
-  .note p { color: #64748B; font-size: 12px; line-height: 1.5; margin: 0; }
-  .footer { padding: 20px 40px; text-align: center; border-top: 1px solid #1E3A5F; }
+  .btn { display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #29ABE2, #1A7BA8); color: #FFFFFF; text-decoration: none; border-radius: 14px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 24px rgba(41,171,226,0.25); }
+  .note { padding: 8px 40px 32px; text-align: center; }
+  .note p { color: #64748B; font-size: 12px; line-height: 1.6; margin: 0; }
+  .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(41,171,226,0.2), transparent); margin: 0 40px; }
+  .footer { padding: 24px 40px; text-align: center; }
   .footer p { color: #475569; font-size: 11px; margin: 0; }
-  .icon { width: 64px; height: 64px; margin: 0 auto 16px; background: linear-gradient(135deg, #29ABE2, #1A7BA8); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 </style>
 </head>
 <body>
+<div class="outer">
 <div class="container">
+  <div class="logo-area">
+    <img src="{{ logo_url }}" alt="Citadel" width="72" height="72" style="border-radius: 16px;" />
+  </div>
   <div class="header">
-    <div class="icon">
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-    </div>
     <h1>Verify Your Email</h1>
-    <p>Thank you for registering with Citadel. Please verify your email address to activate your account and start using our services.</p>
+    <p>Thank you for registering with Citadel.<br/>Please verify your email address to activate your account.</p>
   </div>
   <div class="body">
     <a href="{{ verification_url }}" class="btn">Verify Email</a>
-    <div class="fallback">
-      <p>If the button above doesn't work, copy and paste the following link into your browser:</p>
-      <p><a href="{{ verification_url }}">{{ verification_url }}</a></p>
-    </div>
   </div>
+  <div class="divider"></div>
   <div class="note">
-    <p>This verification link will expire in 24 hours. If you did not create an account with Citadel, please ignore this email.</p>
+    <p>This link will expire in 24 hours. If you did not create an account with Citadel, please ignore this email.</p>
   </div>
   <div class="footer">
     <p>&copy; 2025 Citadel Group. All rights reserved.</p>
   </div>
+</div>
 </div>
 </body>
 </html>

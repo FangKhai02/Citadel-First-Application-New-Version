@@ -5,28 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Email Verified — Citadel</title>
 <style>
-  body { margin: 0; padding: 0; background-color: #0C1829; font-family: 'Segoe UI', Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-  .container { max-width: 480px; margin: 40px auto; background-color: #0F172A; border-radius: 16px; border: 1px solid #1E3A5F; overflow: hidden; text-align: center; padding: 48px 40px; }
-  .icon { width: 80px; height: 80px; margin: 0 auto 24px; background: linear-gradient(135deg, #22C55E, #16A34A); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 40px rgba(34,197,94,0.2); }
-  h1 { color: #E2E8F0; font-size: 28px; font-weight: 700; margin: 0 0 12px; }
-  p { color: #94A3B8; font-size: 15px; line-height: 1.6; margin: 0 0 8px; }
-  .note { margin-top: 24px; padding: 16px; background-color: rgba(255,255,255,0.04); border-radius: 10px; border: 1px solid #1E3A5F; }
+  body { margin: 0; padding: 0; background-color: #080E1A; font-family: 'Segoe UI', Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .container { max-width: 480px; margin: 40px auto; background-color: #0F172A; border-radius: 20px; border: 1px solid rgba(41,171,226,0.15); overflow: hidden; text-align: center; }
+  .logo-area { padding: 40px 40px 0; }
+  .logo-area img { width: 72px; height: 72px; border-radius: 16px; }
+  .icon { width: 72px; height: 72px; margin: 24px auto 0; background: linear-gradient(135deg, #22C55E, #16A34A); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 40px rgba(34,197,94,0.2); }
+  .content { padding: 24px 40px 32px; }
+  h1 { color: #E2E8F0; font-size: 28px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.02em; }
+  p { color: #94A3B8; font-size: 15px; line-height: 1.7; margin: 0 0 8px; }
+  .note { margin-top: 20px; padding: 16px; background-color: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(41,171,226,0.1); }
   .note p { color: #64748B; font-size: 13px; }
-  .footer { margin-top: 32px; }
-  .footer p { color: #475569; font-size: 11px; }
+  .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(41,171,226,0.2), transparent); margin: 0 40px; }
+  .footer { padding: 20px 40px; }
+  .footer p { color: #475569; font-size: 11px; margin: 0; }
 </style>
 </head>
 <body>
 <div class="container">
+  <div class="logo-area">
+    <img src="{{ logo_url }}" alt="Citadel" width="72" height="72" />
+  </div>
   <div class="icon">
-    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="white" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="white" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
   </div>
-  <h1>Email Verified!</h1>
-  <p>Your email has been verified successfully.</p>
-  <p>You can now log in to your Citadel account.</p>
-  <div class="note">
-    <p>Return to the Citadel app on your mobile device and log in with your credentials.</p>
+  <div class="content">
+    <h1>Email Verified!</h1>
+    <p>Your email has been verified successfully.</p>
+    <p>You can now log in to your Citadel account.</p>
+    <div class="note">
+      <p>Return to the Citadel app on your mobile device and log in with your credentials.</p>
+    </div>
   </div>
+  <div class="divider"></div>
   <div class="footer">
     <p>&copy; 2025 Citadel Group. All rights reserved.</p>
   </div>

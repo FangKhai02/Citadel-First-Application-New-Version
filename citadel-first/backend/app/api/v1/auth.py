@@ -2,6 +2,8 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+from jinja2 import Environment, FileSystemLoader
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -32,13 +34,14 @@ from app.schemas.auth import (
     ResendVerificationRequest,
     TokenResponse,
 )
-from app.services.email_service import send_verification_email
+from app.services.email_service import send_verification_email, _logo_url
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 _TEMPLATES_DIR = Path("app/templates")
+_JINJA_ENV = Environment(loader=FileSystemLoader("app/templates"), autoescape=True)
 
 
 @router.post("/login", response_model=TokenResponse, summary="Mobile login (clients & agents)")
@@ -189,15 +192,17 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one_or_none()
 
     if not user:
-        error_html = (_TEMPLATES_DIR / "verification_error.html").read_text()
-        return HTMLResponse(content=error_html)
+        template = _JINJA_ENV.get_template("verification_error.html")
+        html = template.render(logo_url=_logo_url())
+        return HTMLResponse(content=html)
 
     user.email_verified_at = datetime.now(timezone.utc)
     user.email_verification_token = None
     await db.commit()
 
-    success_html = (_TEMPLATES_DIR / "verification_success.html").read_text()
-    return HTMLResponse(content=success_html)
+    template = _JINJA_ENV.get_template("verification_success.html")
+    html = template.render(logo_url=_logo_url())
+    return HTMLResponse(content=html)
 
 
 @router.post(
