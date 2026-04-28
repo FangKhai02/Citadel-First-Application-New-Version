@@ -51,11 +51,17 @@ async def get_me(current: tuple = Depends(get_current_user)):
         if isinstance(user, AppUser)
         else True  # AdminUser — signup doesn't apply
     )
+    email_verified = (
+        user.email_verified_at is not None
+        if isinstance(user, AppUser)
+        else True  # AdminUser — verification doesn't apply
+    )
     return MeResponse(
         id=user.id,
         email=email,
         user_type=user_type,
         name=name,
         signup_completed=signup_completed,
+        email_verified=email_verified,
         created_at=user.created_at,
     )

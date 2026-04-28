@@ -17,6 +17,8 @@ class AppUser(Base):
     user_type: Mapped[str] = mapped_column(String, nullable=False)  # CLIENT | AGENT | CORPORATE
     is_deleted: Mapped[int] = mapped_column(Integer, default=0)
     signup_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_verification_token: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, onupdate=func.now())
 

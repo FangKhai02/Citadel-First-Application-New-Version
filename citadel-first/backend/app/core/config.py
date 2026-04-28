@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     FACE_MATCH_THRESHOLD: float = 0.60
     FACE_NET_DEVICE: str = "cpu"
 
+    # Email (Resend)
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "Citadel <onboarding@resend.dev>"
+    VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
+
+    # Public-facing URL used for verification links
+    BACKEND_URL: str = "http://localhost:8000"
+
     model_config = {"env_file": ".env"}
 
 

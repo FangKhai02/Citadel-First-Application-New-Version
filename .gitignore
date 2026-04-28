@@ -4,6 +4,14 @@
 *.env
 !.env.example
 
+# Deployment configs with server-specific secrets/IPs
+citadel-first/backend/deploy/
+citadel-first/backend/deploy.sh
+citadel-first/ssh-tunnel/
+
+# Vanguard docs (internal reference, not code)
+Vanguard Documents Fields Needed/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -47,8 +55,8 @@ Desktop.ini
 # Testing Images (large local files)
 Testing Images/
 
-# SQL scripts with potential data
-SQL Script (Old Vendor)/
+# SQL scripts with potential data (old vendor migration)
+citadel-first/SQL Script (Old Vendor)/
 
 # Logs
 *.log

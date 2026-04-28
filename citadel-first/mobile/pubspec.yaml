@@ -21,6 +21,9 @@ dependencies:
   # Secure token storage
   flutter_secure_storage: ^10.0.0
 
+  # Environment toggle persistence
+  shared_preferences: ^2.5.3
+
   # Navigation
   go_router: ^17.2.1
 

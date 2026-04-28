@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_endpoints.dart';
+import '../../core/api/environment_config.dart';
 import '../../core/auth/auth_bloc.dart';
 import '../../core/auth/auth_event.dart';
+import '../../core/storage/secure_storage.dart';
 import 'login_bloc.dart';
 import 'login_event.dart';
 import 'login_state.dart';
@@ -82,6 +86,49 @@ class _LoginViewState extends State<_LoginView>
     ));
   }
 
+  Future<void> _switchEnvironment(BuildContext context) async {
+    final nextEnv = EnvironmentConfig.current == Environment.local
+        ? Environment.staging
+        : Environment.local;
+    final ibm = GoogleFonts.ibmPlexSans;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Switch to ${nextEnv == Environment.staging ? 'Staging' : 'Local'}?',
+            style: ibm(color: Colors.white, fontWeight: FontWeight.w700)),
+        content: Text(
+          'API will point to:\n\n'
+          '${nextEnv == Environment.staging
+              ? 'https://api-staging.citadelgroup.com.my'
+              : 'http://88.88.1.22:8000'}\n\n'
+          'You will be logged out.',
+          style: ibm(color: const Color(0xFF94A3B8), fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: ibm(color: const Color(0xFF94A3B8))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Switch', style: ibm(color: _cyan, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await EnvironmentConfig.setEnvironment(nextEnv);
+    ApiClient().rebuild();
+    await SecureStorage.clearAll();
+    if (context.mounted) {
+      setState(() {});
+      context.read<AuthBloc>().add(const AuthLogoutRequested());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ibm = GoogleFonts.ibmPlexSans;
@@ -95,18 +142,101 @@ class _LoginViewState extends State<_LoginView>
           context.go(state.userType == 'AGENT' ? '/agent/dashboard' : '/client/dashboard');
         } else if (state is LoginFailure) {
           if (state.emailNotRegistered) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.clearSnackBars();
+            messenger.showSnackBar(
               SnackBar(
                 content: Row(children: [
                   const Icon(Icons.person_add_outlined, color: Colors.white, size: 18),
                   const SizedBox(width: 10),
                   Expanded(child: Text(state.message, style: ibm(fontSize: 13))),
                 ]),
-                backgroundColor: _errorRed,
+                backgroundColor: const Color(0xFFE67E22),
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 margin: const EdgeInsets.all(16),
                 duration: const Duration(seconds: 5),
+                onVisible: () {
+                  Future.delayed(const Duration(seconds: 5), () {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    }
+                  });
+                },
+                action: SnackBarAction(
+                  label: 'Sign Up',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    messenger.hideCurrentSnackBar();
+                    context.push('/signup');
+                  },
+                ),
+              ),
+            );
+          } else if (state.emailNotVerified) {
+            final email = _emailCtrl.text.trim();
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.clearSnackBars();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Row(children: [
+                  const Icon(Icons.mark_email_unread_outlined, color: Colors.white, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(state.message, style: ibm(fontSize: 13))),
+                ]),
+                backgroundColor: const Color(0xFFE67E22),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 5),
+                onVisible: () {
+                  Future.delayed(const Duration(seconds: 5), () {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    }
+                  });
+                },
+                action: SnackBarAction(
+                  label: 'Resend',
+                  textColor: Colors.white,
+                  onPressed: () async {
+                    messenger.hideCurrentSnackBar();
+                    try {
+                      await ApiClient().post(
+                        ApiEndpoints.resendVerification,
+                        data: {'email': email},
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(children: [
+                              const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text('Verification email resent. Check your inbox.', style: ibm(fontSize: 13))),
+                            ]),
+                            backgroundColor: const Color(0xFF22C55E),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            margin: const EdgeInsets.all(16),
+                            duration: const Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to resend. Try again.', style: ibm(fontSize: 13)),
+                            backgroundColor: _errorRed,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            margin: const EdgeInsets.all(16),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
               ),
             );
           } else {
@@ -289,10 +419,27 @@ class _LoginViewState extends State<_LoginView>
                     ),
 
                     const SizedBox(height: 12),
-                    Text(
-                      '© ${DateTime.now().year} Citadel Group. All rights reserved.',
-                      style: ibm(fontSize: 10, color: _inputBorder),
-                      textAlign: TextAlign.center,
+                    GestureDetector(
+                      onLongPress: () => _switchEnvironment(context),
+                      child: Text.rich(
+                        TextSpan(
+                          text: '© ${DateTime.now().year} Citadel Group  ·  ',
+                          style: ibm(fontSize: 10, color: _inputBorder),
+                          children: [
+                            TextSpan(
+                              text: EnvironmentConfig.label,
+                              style: ibm(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: EnvironmentConfig.current == Environment.staging
+                                    ? const Color(0xFFF59E0B) // amber for staging
+                                    : const Color(0xFF22C55E), // green for local
+                              ),
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                     const SizedBox(height: 24),
                   ],

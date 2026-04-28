@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import decode_token
+from app.services.email_service import send_verification_email
 from app.models.signup import BankruptcyDeclaration, DisclaimerAcceptance
 from app.models.user import AppUser
 from app.models.user_details import UserDetails
@@ -894,6 +895,16 @@ async def sign_onboarding_agreement(
 
     await db.commit()
     await db.refresh(record)
+
+    # Send verification email now that signup is complete
+    if current_user.email_verification_token and current_user.email_verified_at is None:
+        try:
+            await send_verification_email(
+                current_user.email_address, current_user.email_verification_token
+            )
+            logger.info("Verification email sent to %s", current_user.email_address)
+        except Exception:
+            logger.exception("Failed to send verification email to %s", current_user.email_address)
 
     logger.info(
         "ONBOARDING_AGREEMENT user_id=%d sig_key=%s pdf_key=%s",

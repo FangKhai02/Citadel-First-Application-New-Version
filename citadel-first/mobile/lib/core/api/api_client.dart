@@ -7,11 +7,11 @@ class ApiClient {
   factory ApiClient() => _instance;
   ApiClient._internal();
 
-  late final Dio _dio = _buildDio();
+  Dio _dio = _buildDio();
 
   Dio get dio => _dio;
 
-  Dio _buildDio() {
+  static Dio _buildDio() {
     final dio = Dio(BaseOptions(
       baseUrl: ApiEndpoints.baseUrl,
       connectTimeout: const Duration(seconds: 30),
@@ -21,6 +21,10 @@ class ApiClient {
 
     dio.interceptors.add(_AuthInterceptor(dio));
     return dio;
+  }
+
+  void rebuild() {
+    _dio = _buildDio();
   }
 
   // Convenience methods

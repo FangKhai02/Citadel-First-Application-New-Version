@@ -31,12 +31,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final userType = res.data['user_type'] as String;
       final userId = res.data['id'] as int;
       final signupCompleted = res.data['signup_completed'] as bool? ?? true;
+      final emailVerified = res.data['email_verified'] as bool? ?? true;
 
       if (!signupCompleted) {
         // Incomplete signup — clean up and force re-registration
         try {
           await _api.delete(ApiEndpoints.incompleteSignup);
         } catch (_) {}
+        await SecureStorage.clearAll();
+        emit(const AuthUnauthenticated());
+        return;
+      }
+
+      if (!emailVerified) {
+        // Email not verified — clear tokens and redirect to login
         await SecureStorage.clearAll();
         emit(const AuthUnauthenticated());
         return;

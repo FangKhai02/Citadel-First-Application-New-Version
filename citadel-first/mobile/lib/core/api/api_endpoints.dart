@@ -1,6 +1,7 @@
+import 'environment_config.dart';
+
 class ApiEndpoints {
-  // static const String baseUrl = 'http://localhost:8000/api/v1'; // adb reverse tcp:8000 tcp:8000
-  static const String baseUrl = 'http://88.88.1.22:8000/api/v1'; // Physical device → host machine IP (company wifi)
+  static String get baseUrl => EnvironmentConfig.baseUrl;
 
   // Auth
   static const String login    = '/auth/login';
@@ -40,4 +41,5 @@ class ApiEndpoints {
 
   // Auth
   static const String incompleteSignup = '/auth/incomplete-signup';
+  static const String resendVerification = '/auth/resend-verification';
 }

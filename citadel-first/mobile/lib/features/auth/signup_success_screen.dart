@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/auth/auth_bloc.dart';
-import '../../core/auth/auth_event.dart';
+import '../../core/storage/secure_storage.dart';
 
 const _bgPrimary   = Color(0xFF0C1829);
 const _cyan        = Color(0xFF29ABE2);
@@ -66,8 +65,111 @@ class _SignupSuccessScreenState extends State<SignupSuccessScreen>
     super.dispose();
   }
 
-  void _onGoToLogin() {
-    context.read<AuthBloc>().add(const AuthLogoutRequested());
+  void _onGoToLogin() async {
+    // Clear local tokens so the app treats the user as unauthenticated
+    await SecureStorage.clearAll();
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: _borderGlass.withAlpha(60), width: 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _cyan.withAlpha(15),
+                  border: Border.all(color: _cyan.withAlpha(40), width: 1.5),
+                ),
+                child: const Icon(
+                  Icons.mark_email_unread_outlined,
+                  color: _cyan,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Verify Your Email',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.bodoniModa(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: _textHeading,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'A verification email has been sent to your email address. Please verify your email before logging in to your account.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.jost(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w300,
+                  color: _textMuted,
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [_ctaTop, _ctaBottom],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _cyan.withAlpha(50),
+                        blurRadius: 18,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      context.go('/login');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Continue',
+                      style: GoogleFonts.jost(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override

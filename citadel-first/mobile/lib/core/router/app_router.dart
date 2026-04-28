@@ -53,6 +53,12 @@ final appRouter = GoRouter(
     final onSignupSuccess = state.matchedLocation == '/signup/client/success';
     final onSignupFlow = onDeclaration || onDisclaimer || onIdentity || onDocUpload || onDocReview || onSelfieInst || onSelfieCapture || onProcessing || onVerifyResult || onPersonalDetails || onAddressContact || onEmploymentDetails || onKycCrs || onPepDeclaration || onOnboardingAgreement || onSignupSuccess || state.matchedLocation == '/signup/client/document-selection' || onRegister;
 
+    // Signup success page should redirect to login when unauthenticated,
+    // regardless of being part of the signup flow
+    if (authState is AuthUnauthenticated && onSignupSuccess) {
+      return '/login';
+    }
+
     if (authState is AuthAuthenticated) {
       if (!onSignupFlow) {
         return _dashboardRoute(authState.userType);

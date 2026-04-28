@@ -14,6 +14,8 @@ from app.models.user import AppUser, AdminUser  # noqa: F401
 from app.models.user_details import UserDetails  # noqa: F401
 from app.models.signup import BankruptcyDeclaration, DisclaimerAcceptance  # noqa: F401
 from app.models.face_verification import FaceVerification  # noqa: F401
+from app.models.pep_declaration import PepDeclaration  # noqa: F401
+from app.models.crs_tax_residency import CrsTaxResidency  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

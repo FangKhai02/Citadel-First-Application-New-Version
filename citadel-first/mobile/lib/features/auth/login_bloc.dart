@@ -52,6 +52,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
       if (statusCode == 404) {
         emit(LoginFailure(detail, emailNotRegistered: true));
+      } else if (statusCode == 403) {
+        emit(LoginFailure(detail, emailNotVerified: true));
       } else {
         emit(LoginFailure(detail));
       }

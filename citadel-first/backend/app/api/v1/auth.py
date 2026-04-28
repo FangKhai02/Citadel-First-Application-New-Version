@@ -1,4 +1,9 @@
+import logging
+from datetime import datetime, timezone
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +13,7 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    generate_verification_token,
     hash_password,
     verify_password,
 )
@@ -23,10 +29,16 @@ from app.schemas.auth import (
     MobileLoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResendVerificationRequest,
     TokenResponse,
 )
+from app.services.email_service import send_verification_email
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+_TEMPLATES_DIR = Path("app/templates")
 
 
 @router.post("/login", response_model=TokenResponse, summary="Mobile login (clients & agents)")
@@ -49,6 +61,12 @@ async def mobile_login(body: MobileLoginRequest, db: AsyncSession = Depends(get_
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
+        )
+
+    if user.email_verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified. Please check your email for the verification link.",
         )
 
     token_data = {"sub": str(user.id), "user_type": user.user_type, "source": "mobile"}
@@ -80,6 +98,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         email_address=body.email,
         password=hash_password(body.password),
         user_type=body.user_type,
+        email_verification_token=generate_verification_token(),
     )
     db.add(user)
     await db.flush()
@@ -155,9 +174,75 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
 
 @router.post("/logout", response_model=MessageResponse, summary="Logout (client-side token discard)")
 async def logout():
-    # JWT is stateless — client must discard tokens on their end.
-    # For server-side revocation, store token JTI in a blocklist table.
     return MessageResponse(message="Logged out successfully")
+
+
+@router.get(
+    "/verify-email",
+    summary="Verify email address",
+    response_class=HTMLResponse,
+)
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(AppUser).where(AppUser.email_verification_token == token)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        error_html = (_TEMPLATES_DIR / "verification_error.html").read_text()
+        return HTMLResponse(content=error_html)
+
+    user.email_verified_at = datetime.now(timezone.utc)
+    user.email_verification_token = None
+    await db.commit()
+
+    success_html = (_TEMPLATES_DIR / "verification_success.html").read_text()
+    return HTMLResponse(content=success_html)
+
+
+@router.post(
+    "/resend-verification",
+    response_model=MessageResponse,
+    summary="Resend verification email",
+)
+async def resend_verification(
+    body: ResendVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(AppUser).where(
+            AppUser.email_address == body.email,
+            AppUser.is_deleted == 0,
+        )
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email is not registered.",
+        )
+
+    if user.email_verified_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already verified.",
+        )
+
+    user.email_verification_token = generate_verification_token()
+    await db.commit()
+    await db.refresh(user)
+
+    try:
+        await send_verification_email(user.email_address, user.email_verification_token)
+    except Exception:
+        logger.exception("Failed to resend verification email to %s", user.email_address)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please try again later.",
+        )
+
+    return MessageResponse(message="Verification email sent. Please check your inbox.")
 
 
 _bearer = HTTPBearer()
