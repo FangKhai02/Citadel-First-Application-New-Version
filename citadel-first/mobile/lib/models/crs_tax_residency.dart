@@ -1,6 +1,7 @@
 /// Data models for CRS tax residency rows.
 class CrsTaxResidencyRow {
   String jurisdiction;
+  String? tinStatus; // "have_tin" or "no_tin"
   String? tin;
   String? noTinReason; // "A", "B", or "C"
   String? reasonBExplanation;
@@ -8,6 +9,7 @@ class CrsTaxResidencyRow {
 
   CrsTaxResidencyRow({
     this.jurisdiction = '',
+    this.tinStatus,
     this.tin,
     this.noTinReason,
     this.reasonBExplanation,
@@ -16,6 +18,7 @@ class CrsTaxResidencyRow {
 
   Map<String, dynamic> toJson() => {
         'jurisdiction': jurisdiction,
+        'tin_status': tinStatus,
         'tin': tin,
         'no_tin_reason': noTinReason,
         'reason_b_explanation': reasonBExplanation,
@@ -24,6 +27,7 @@ class CrsTaxResidencyRow {
 
   CrsTaxResidencyRow copyWith({
     String? jurisdiction,
+    String? tinStatus,
     String? tin,
     String? noTinReason,
     String? reasonBExplanation,
@@ -31,6 +35,7 @@ class CrsTaxResidencyRow {
   }) =>
       CrsTaxResidencyRow(
         jurisdiction: jurisdiction ?? this.jurisdiction,
+        tinStatus: tinStatus ?? this.tinStatus,
         tin: tin ?? this.tin,
         noTinReason: noTinReason ?? this.noTinReason,
         reasonBExplanation: reasonBExplanation ?? this.reasonBExplanation,

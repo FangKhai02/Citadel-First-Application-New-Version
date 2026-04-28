@@ -165,20 +165,6 @@ class _VerificationResultScreenState extends State<VerificationResultScreen>
                                 icon: Icons.refresh_rounded,
                                 onPressed: widget.onRetry,
                               ),
-                              const SizedBox(height: 10),
-                              Center(
-                                child: TextButton(
-                                  onPressed: () {},
-                                  child: Text(
-                                    'Contact Support',
-                                    style: GoogleFonts.jost(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: _textMuted,
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ],
                         ),

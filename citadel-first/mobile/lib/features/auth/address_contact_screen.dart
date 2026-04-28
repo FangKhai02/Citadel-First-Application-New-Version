@@ -495,17 +495,6 @@ class _AddressContactScreenState extends State<AddressContactScreen>
                                     ),
                                     const SizedBox(height: 18),
 
-                                    // Home Telephone
-                                    _FieldLabel(label: 'Home Telephone'),
-                                    const SizedBox(height: 6),
-                                    _InputField(
-                                      controller: _homePhoneCtrl,
-                                      hint: 'e.g. +603-1234 5678 (optional)',
-                                      prefixIcon: Icons.phone_outlined,
-                                      keyboardType: TextInputType.phone,
-                                    ),
-                                    const SizedBox(height: 20),
-
                                     // Mobile Number
                                     _FieldLabel(label: 'Mobile Number', required: true),
                                     const SizedBox(height: 6),
@@ -520,6 +509,17 @@ class _AddressContactScreenState extends State<AddressContactScreen>
                                         }
                                         return null;
                                       },
+                                    ),
+                                    const SizedBox(height: 20),
+
+                                    // Home Telephone
+                                    _FieldLabel(label: 'Home Telephone (optional)'),
+                                    const SizedBox(height: 6),
+                                    _InputField(
+                                      controller: _homePhoneCtrl,
+                                      hint: 'e.g. +603-1234 5678',
+                                      prefixIcon: Icons.phone_outlined,
+                                      keyboardType: TextInputType.phone,
                                     ),
                                     const SizedBox(height: 20),
 

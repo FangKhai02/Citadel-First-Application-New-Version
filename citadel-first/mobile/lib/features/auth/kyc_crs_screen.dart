@@ -53,9 +53,9 @@ const _jurisdictionOptions = ['Malaysia', 'Singapore', 'Thailand', 'Indonesia', 
 
 // ── TIN reason display map (descriptive instead of codes) ────────────────────
 const _tinReasonDisplay = {
-  'A': 'A — The jurisdiction does not issue TINs to its residents',
-  'B': 'B — Unable to obtain a TIN (explanation required)',
-  'C': "C — TIN is not required by the jurisdiction's authorities",
+  'A': 'A — I have not been issued a TIN by the relevant jurisdiction',
+  'B': 'B — I am unable to obtain a TIN for reasons stated below',
+  'C': 'C — The jurisdiction does not issue TINs to its residents',
 };
 
 // ── Glass card wrapper ───────────────────────────────────────────────────────
@@ -195,6 +195,10 @@ class _KycCrsScreenState extends State<KycCrsScreen>
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     // Validate non-FormField fields
+    if (_sourceOfTrustFund == null) {
+      setState(() => _errorMessage = 'Source of trust fund is required.');
+      return;
+    }
     if (_sourceOfIncome == null) {
       setState(() => _errorMessage = 'Source of income is required.');
       return;
@@ -212,9 +216,20 @@ class _KycCrsScreenState extends State<KycCrsScreen>
             'Jurisdiction is required for tax residency row ${i + 1}.');
         return;
       }
-      if (row.noTinReason == null && (row.tin == null || row.tin!.trim().isEmpty)) {
+      if (row.tinStatus == null) {
         setState(() => _errorMessage =
-            'Either a TIN or a reason for no TIN is required for row ${i + 1}.');
+            'Please indicate whether you possess a TIN for row ${i + 1}.');
+        return;
+      }
+      if (row.tinStatus == 'have_tin' &&
+          (row.tin == null || row.tin!.trim().isEmpty)) {
+        setState(() => _errorMessage =
+            'TIN number is required for row ${i + 1}.');
+        return;
+      }
+      if (row.tinStatus == 'no_tin' && row.noTinReason == null) {
+        setState(() => _errorMessage =
+            'Please select a reason for not possessing a TIN for row ${i + 1}.');
         return;
       }
       if (row.noTinReason == 'B' &&
@@ -229,7 +244,7 @@ class _KycCrsScreenState extends State<KycCrsScreen>
     try {
       // 1. Save KYC fields
       final kycData = <String, dynamic>{
-        if (_sourceOfTrustFund != null) 'source_of_trust_fund': _sourceOfTrustFund,
+        'source_of_trust_fund': _sourceOfTrustFund,
         if (_sourceOfIncome != null) 'source_of_income': _sourceOfIncome,
         if (_countryOfBirth != null) 'country_of_birth': _countryOfBirth,
         if (_physicallyPresent != null) 'physically_present': _physicallyPresent,
@@ -249,8 +264,13 @@ class _KycCrsScreenState extends State<KycCrsScreen>
       final crsData = {
         'residencies': _crsRows.map((r) {
           final jurisdiction = r.jurisdiction == 'Others' ? (r.otherJurisdiction ?? '') : r.jurisdiction;
-          final map = <String, dynamic>{'jurisdiction': jurisdiction};
-          if (r.tin != null && r.tin!.trim().isNotEmpty) map['tin'] = r.tin!.trim();
+          final map = <String, dynamic>{
+            'jurisdiction': jurisdiction,
+            'tin_status': r.tinStatus,
+          };
+          if (r.tinStatus == 'have_tin' && r.tin != null && r.tin!.trim().isNotEmpty) {
+            map['tin'] = r.tin!.trim();
+          }
           if (r.noTinReason != null) map['no_tin_reason'] = r.noTinReason;
           if (r.reasonBExplanation != null && r.reasonBExplanation!.trim().isNotEmpty)
             map['reason_b_explanation'] = r.reasonBExplanation!.trim();
@@ -371,15 +391,17 @@ class _KycCrsScreenState extends State<KycCrsScreen>
                                     const SizedBox(height: 20),
 
                                     // ── Source of Trust Fund ──
-                                    _FieldLabel(label: 'Source of Trust Fund'),
+                                    _FieldLabel(label: 'Source of Trust Fund', required: true),
                                     const SizedBox(height: 6),
                                     _DropdownField(
                                       value: _sourceOfTrustFund,
-                                      hint: 'Select source of trust fund (optional)',
+                                      hint: 'Select source of trust fund',
                                       items: kSourceOfFundOptions,
                                       prefixIcon: Icons.account_balance_outlined,
                                       onChanged: (v) =>
                                           setState(() => _sourceOfTrustFund = v),
+                                      validator: (v) =>
+                                          v == null ? 'This field is required' : null,
                                     ),
                                     const SizedBox(height: 22),
 
@@ -424,12 +446,12 @@ class _KycCrsScreenState extends State<KycCrsScreen>
 
                                     // ── Main Sources of Income & Capital ──
                                     _FieldLabel(
-                                        label: 'Main Sources of Income & Capital'),
+                                        label: 'Main Sources of Income & Capital (optional)'),
                                     const SizedBox(height: 6),
                                     _MultilineField(
                                       controller: _incomeCapitalCtrl,
                                       hint:
-                                          'Describe your main sources of income and capital... (optional)',
+                                          'Describe your main sources of income and capital...',
                                     ),
                                     const SizedBox(height: 22),
 
@@ -447,32 +469,32 @@ class _KycCrsScreenState extends State<KycCrsScreen>
 
                                     // ── Marital History / Dependents ──
                                     _FieldLabel(
-                                        label: 'Marital History / Dependents'),
+                                        label: 'Marital History / Dependents (optional)'),
                                     const SizedBox(height: 6),
                                     _MultilineField(
                                       controller: _maritalHistoryCtrl,
                                       hint:
-                                          'Provide details about marital history and dependents... (optional)',
+                                          'Provide details about marital history and dependents...',
                                     ),
                                     const SizedBox(height: 22),
 
                                     // ── Geographical Connections ──
-                                    _FieldLabel(label: 'Geographical Connections'),
+                                    _FieldLabel(label: 'Geographical Connections (optional)'),
                                     const SizedBox(height: 6),
                                     _MultilineField(
                                       controller: _geoConnectionsCtrl,
                                       hint:
-                                          'List countries with significant connections... (optional)',
+                                          'List countries with significant connections...',
                                     ),
                                     const SizedBox(height: 22),
 
                                     // ── Other Relevant Info ──
-                                    _FieldLabel(label: 'Other Relevant Info'),
+                                    _FieldLabel(label: 'Other Relevant Info (optional)'),
                                     const SizedBox(height: 6),
                                     _MultilineField(
                                       controller: _otherInfoCtrl,
                                       hint:
-                                          'Any other relevant information you wish to provide... (optional)',
+                                          'Any other relevant information you wish to provide...',
                                     ),
                                   ],
                                 ),
@@ -1085,101 +1107,60 @@ class _CrsRowCardState extends State<_CrsRowCard> {
           ],
           const SizedBox(height: 14),
 
-          // TIN
-          _FieldLabel(label: 'TIN (Tax Identification Number)', required: true),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _tinCtrl,
-            style: GoogleFonts.jost(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFFF8FAFC),
-            ),
-            decoration: InputDecoration(
-              hintText: 'Enter TIN',
-              prefixIcon: Icon(Icons.pin_outlined, size: 18, color: _textMuted),
-              hintStyle: GoogleFonts.jost(
-                  fontSize: 14, color: const Color(0xFF475569)),
-              filled: true,
-              fillColor: _inputFill,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: _borderGlass, width: 1),
+          // ── TIN Status Selection ──
+          _FieldLabel(label: 'Tax Identification Number (TIN) Status', required: true),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _TinStatusChip(
+                label: 'I Possess a TIN',
+                selected: row.tinStatus == 'have_tin',
+                onTap: () {
+                  widget.onUpdate(row.copyWith(
+                    tinStatus: 'have_tin',
+                    noTinReason: null,
+                    reasonBExplanation: null,
+                  ));
+                },
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    BorderSide(color: _cyan.withAlpha(180), width: 1.5),
+              const SizedBox(width: 12),
+              _TinStatusChip(
+                label: 'I Do Not Possess a TIN',
+                selected: row.tinStatus == 'no_tin',
+                onTap: () {
+                  widget.onUpdate(row.copyWith(
+                    tinStatus: 'no_tin',
+                    tin: null,
+                    noTinReason: null,
+                    reasonBExplanation: null,
+                  ));
+                  _tinCtrl.clear();
+                },
               ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _errorRed, width: 1),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _errorRed, width: 1.5),
-              ),
-              errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
-            ),
-            onChanged: (v) {
-              widget.onUpdate(row.copyWith(tin: v));
-            },
-          ),
-          const SizedBox(height: 14),
-
-          // No TIN reason
-          _FieldLabel(label: 'Reason if no TIN'),
-          const SizedBox(height: 6),
-          _DropdownField(
-            value: row.noTinReason != null
-                ? _tinReasonDisplay[row.noTinReason!]
-                : null,
-            hint: 'Select reason (if no TIN)',
-            items: _tinReasonDisplay.values.toList(),
-            prefixIcon: Icons.help_outline_rounded,
-            onChanged: (v) {
-              // Map the display text back to the code key
-              final code = _tinReasonDisplay.entries
-                  .firstWhere((e) => e.value == v,
-                      orElse: () => const MapEntry('', ''))
-                  .key;
-              if (code.isNotEmpty) {
-                widget.onUpdate(row.copyWith(
-                  noTinReason: code,
-                  reasonBExplanation:
-                      code != 'B' ? null : row.reasonBExplanation,
-                ));
-              }
-            },
+            ],
           ),
 
-          // Conditional explanation field for Reason B
-          if (row.noTinReason == 'B') ...[
-            const SizedBox(height: 10),
-            _FieldLabel(label: 'Explanation for Reason B', required: true),
+          // ── Conditional: TIN Number (when "I Possess a TIN") ──
+          if (row.tinStatus == 'have_tin') ...[
+            const SizedBox(height: 12),
+            _FieldLabel(label: 'TIN Number', required: true),
             const SizedBox(height: 6),
             TextFormField(
-              controller: _reasonBCtrl,
-              maxLines: 2,
-              minLines: 1,
+              controller: _tinCtrl,
               style: GoogleFonts.jost(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFFF8FAFC),
               ),
               decoration: InputDecoration(
-                hintText: 'Explain why you are unable to obtain a TIN...',
+                hintText: 'Enter TIN',
+                prefixIcon: Icon(Icons.pin_outlined, size: 18, color: _textMuted),
                 hintStyle: GoogleFonts.jost(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300,
-                    color: const Color(0xFF475569)),
+                    fontSize: 14, color: const Color(0xFF475569)),
                 filled: true,
                 fillColor: _inputFill,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide:
@@ -1201,11 +1182,137 @@ class _CrsRowCardState extends State<_CrsRowCard> {
                 errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
               ),
               onChanged: (v) {
-                widget.onUpdate(row.copyWith(reasonBExplanation: v));
+                widget.onUpdate(row.copyWith(tin: v));
               },
             ),
           ],
+
+          // ── Conditional: No TIN Reason (when "I Do Not Possess a TIN") ──
+          if (row.tinStatus == 'no_tin') ...[
+            const SizedBox(height: 12),
+            _FieldLabel(label: 'Reason for Not Possessing a TIN', required: true),
+            const SizedBox(height: 6),
+            _DropdownField(
+              value: row.noTinReason != null
+                  ? _tinReasonDisplay[row.noTinReason!]
+                  : null,
+              hint: 'Select reason',
+              items: _tinReasonDisplay.values.toList(),
+              prefixIcon: Icons.help_outline_rounded,
+              onChanged: (v) {
+                // Map the display text back to the code key
+                final code = _tinReasonDisplay.entries
+                    .firstWhere((e) => e.value == v,
+                        orElse: () => const MapEntry('', ''))
+                    .key;
+                if (code.isNotEmpty) {
+                  widget.onUpdate(row.copyWith(
+                    noTinReason: code,
+                    reasonBExplanation:
+                        code != 'B' ? null : row.reasonBExplanation,
+                  ));
+                }
+              },
+            ),
+
+            // Conditional explanation field for Reason B
+            if (row.noTinReason == 'B') ...[
+              const SizedBox(height: 10),
+              _FieldLabel(label: 'Explanation for Reason B', required: true),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _reasonBCtrl,
+                maxLines: 2,
+                minLines: 1,
+                style: GoogleFonts.jost(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFFF8FAFC),
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Explain why you are unable to obtain a TIN...',
+                  hintStyle: GoogleFonts.jost(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w300,
+                      color: const Color(0xFF475569)),
+                  filled: true,
+                  fillColor: _inputFill,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: _borderGlass, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        BorderSide(color: _cyan.withAlpha(180), width: 1.5),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _errorRed, width: 1),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _errorRed, width: 1.5),
+                  ),
+                  errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
+                ),
+                onChanged: (v) {
+                  widget.onUpdate(row.copyWith(reasonBExplanation: v));
+                },
+              ),
+            ],
+          ],
         ],
+      ),
+    );
+  }
+}
+
+// ── TIN status chip ──────────────────────────────────────────────────────────
+
+class _TinStatusChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TinStatusChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? _cyan.withAlpha(30) : Colors.white.withAlpha(6),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? _cyan : _borderGlass,
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.jost(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w300,
+                color: selected ? _cyan : _textBody,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

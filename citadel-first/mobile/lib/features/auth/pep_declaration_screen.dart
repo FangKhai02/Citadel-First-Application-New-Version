@@ -483,6 +483,12 @@ class _PepDeclarationScreenState extends State<PepDeclarationScreen>
                                                 onTap: _isUploadingDoc
                                                     ? null
                                                     : _pickAndUploadDocument,
+                                                onRemove: _supportingDocName != null
+                                                    ? () => setState(() {
+                                                          _supportingDocKey = null;
+                                                          _supportingDocName = null;
+                                                        })
+                                                    : null,
                                               ),
                                             ],
                                           ),
@@ -879,11 +885,13 @@ class _DropdownField extends StatelessWidget {
 
 class _DocumentUploadButton extends StatelessWidget {
   final VoidCallback? onTap;
+  final VoidCallback? onRemove;
   final bool isUploading;
   final String? uploadedFileName;
 
   const _DocumentUploadButton({
     required this.onTap,
+    this.onRemove,
     this.isUploading = false,
     this.uploadedFileName,
   });
@@ -957,6 +965,29 @@ class _DocumentUploadButton extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (isUploaded) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: onRemove,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: _errorRed.withAlpha(18),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _errorRed.withAlpha(60),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 14,
+                          color: _errorRed,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
       ),

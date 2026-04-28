@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/auth/auth_bloc.dart';
+import '../../core/auth/auth_event.dart';
 import '../../core/storage/secure_storage.dart';
 
 const _bgPrimary   = Color(0xFF0C1829);
@@ -66,8 +69,12 @@ class _SignupSuccessScreenState extends State<SignupSuccessScreen>
   }
 
   void _onGoToLogin() async {
-    // Clear local tokens so the app treats the user as unauthenticated
+    // Force logout: clear tokens and update auth state so router
+    // doesn't redirect to the dashboard
     await SecureStorage.clearAll();
+    if (mounted) {
+      context.read<AuthBloc>().add(const AuthLogoutRequested());
+    }
 
     if (!mounted) return;
     showDialog(

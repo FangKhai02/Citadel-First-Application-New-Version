@@ -38,6 +38,7 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
   final _otherOccupationCtrl = TextEditingController();
   final _workTitleCtrl   = TextEditingController();
   String? _natureOfBusiness;
+  final _otherNatureOfBusinessCtrl = TextEditingController();
   final _employerNameCtrl = TextEditingController();
   final _employerAddrCtrl = TextEditingController();
   final _employerPhoneCtrl = TextEditingController();
@@ -48,6 +49,7 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
   String? _errorMessage;
 
   bool get _isOccupationOther => _occupation == 'Other';
+  bool get _isNatureOfBusinessOther => _natureOfBusiness == 'Other';
 
   late final AnimationController _animCtrl;
   late final Animation<double>   _fadeIn;
@@ -69,6 +71,7 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
   void dispose() {
     _animCtrl.dispose();
     _otherOccupationCtrl.dispose();
+    _otherNatureOfBusinessCtrl.dispose();
     _workTitleCtrl.dispose();
     _employerNameCtrl.dispose();
     _employerAddrCtrl.dispose();
@@ -87,6 +90,11 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
       return;
     }
 
+    if (_isNatureOfBusinessOther && _otherNatureOfBusinessCtrl.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please specify your nature of business.');
+      return;
+    }
+
     if (_showEmployerFields && _employerNameCtrl.text.trim().isEmpty) {
       setState(() => _errorMessage = 'Employer name is required for your employment type.');
       return;
@@ -102,6 +110,9 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
         'occupation': occupationValue,
         'work_title': _workTitleCtrl.text.trim(),
         'nature_of_business': _natureOfBusiness,
+        'nature_of_business_other': _isNatureOfBusinessOther
+            ? _otherNatureOfBusinessCtrl.text.trim()
+            : null,
         'annual_income_range': _annualIncome,
         'estimated_net_worth': _netWorth,
       };
@@ -295,9 +306,29 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
                                       icon: Icons.business_outlined,
                                       validator: (v) =>
                                           v == null ? 'Nature of business is required' : null,
-                                      onChanged: (v) =>
-                                          setState(() => _natureOfBusiness = v),
+                                      onChanged: (v) => setState(() {
+                                        _natureOfBusiness = v;
+                                        if (v != 'Other') {
+                                          _otherNatureOfBusinessCtrl.clear();
+                                        }
+                                      }),
                                     ),
+                                    if (_isNatureOfBusinessOther) ...[
+                                      const SizedBox(height: 12),
+                                      _FieldLabel(label: 'Please specify your nature of business', required: true),
+                                      const SizedBox(height: 6),
+                                      _InputField(
+                                        controller: _otherNatureOfBusinessCtrl,
+                                        hint: 'e.g. Renewable Energy',
+                                        prefixIcon: Icons.business_outlined,
+                                        validator: (v) {
+                                          if (v == null || v.trim().isEmpty) {
+                                            return 'Please specify your nature of business';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -343,20 +374,20 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
                                                   ),
                                                   const SizedBox(height: 20),
 
-                                                  _FieldLabel(label: 'Employer Address'),
+                                                  _FieldLabel(label: 'Employer Address (optional)'),
                                                   const SizedBox(height: 6),
                                                   _InputField(
                                                     controller: _employerAddrCtrl,
-                                                    hint: 'Employer street address (optional)',
+                                                    hint: 'Employer street address',
                                                     prefixIcon: Icons.location_on_outlined,
                                                   ),
                                                   const SizedBox(height: 20),
 
-                                                  _FieldLabel(label: 'Employer Telephone'),
+                                                  _FieldLabel(label: 'Employer Telephone (optional)'),
                                                   const SizedBox(height: 6),
                                                   _InputField(
                                                     controller: _employerPhoneCtrl,
-                                                    hint: '+60 3-1234 5678 (optional)',
+                                                    hint: '+60 3-1234 5678',
                                                     prefixIcon: Icons.phone_outlined,
                                                     keyboardType: TextInputType.phone,
                                                   ),

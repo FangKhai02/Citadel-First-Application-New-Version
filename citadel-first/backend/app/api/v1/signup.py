@@ -636,6 +636,8 @@ async def save_employment_details(
         record.work_title = body.work_title
     if body.nature_of_business is not None:
         record.nature_of_business = body.nature_of_business
+    if body.nature_of_business_other is not None:
+        record.nature_of_business_other = body.nature_of_business_other
     if body.employer_name is not None:
         record.employer_name = body.employer_name
     if body.employer_address is not None:
@@ -719,13 +721,25 @@ async def save_crs_tax_residency(
             detail="Must provide between 1 and 5 tax residency jurisdictions.",
         )
 
-    # Validate Reason B requires explanation
+    # Validate tin_status rules
     for row in body.residencies:
-        if row.no_tin_reason == "B" and not row.reason_b_explanation:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Reason B explanation is required for jurisdiction '{row.jurisdiction}'.",
-            )
+        if row.tin_status == "have_tin":
+            if not row.tin or not row.tin.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"TIN number is required for jurisdiction '{row.jurisdiction}' when tin_status is 'have_tin'.",
+                )
+        elif row.tin_status == "no_tin":
+            if not row.no_tin_reason:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"A reason for not possessing a TIN is required for jurisdiction '{row.jurisdiction}'.",
+                )
+            if row.no_tin_reason == "B" and not row.reason_b_explanation:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Reason B explanation is required for jurisdiction '{row.jurisdiction}'.",
+                )
 
     # Delete existing rows
     await db.execute(
@@ -740,6 +754,7 @@ async def save_crs_tax_residency(
         record = CrsTaxResidency(
             app_user_id=current_user.id,
             jurisdiction=row.jurisdiction,
+            tin_status=row.tin_status,
             tin=row.tin,
             no_tin_reason=row.no_tin_reason,
             reason_b_explanation=row.reason_b_explanation,

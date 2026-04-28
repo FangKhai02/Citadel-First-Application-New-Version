@@ -4,7 +4,7 @@
 const kTitleOptions = [
   'Mr',
   'Mrs',
-  'Ms',
+  'Ms / Miss',
   'Mdm',
   'Dr',
   'Dato',
@@ -30,7 +30,6 @@ const kEmploymentTypeOptions = [
   'Housewife',
   'Unemployed',
   'Student',
-  'Other',
 ];
 
 // ── Occupation ──
@@ -48,12 +47,12 @@ const kOccupationOptions = [
   'Manager',
   'Military/Police',
   'Nurse',
-  'Other',
   'Pharmacist',
   'Real Estate Agent',
   'Teacher',
   'Technician',
   'Trader',
+  'Other',
 ];
 
 // ── Nature of Business ──
@@ -61,21 +60,21 @@ const kNatureOfBusinessOptions = [
   'Agriculture',
   'Construction',
   'Education',
-  'Finance & Banking',
+  'Financial Services',
   'Government',
   'Healthcare',
   'Hospitality & Tourism',
-  'IT & Technology',
+  'IT/Technology',
   'Legal',
   'Manufacturing',
   'Mining',
   'Oil & Gas',
-  'Other',
   'Real Estate',
   'Retail',
   'Telecommunications',
   'Transportation',
   'Wholesale & Distribution',
+  'Other',
 ];
 
 // ── Annual Income ──
@@ -119,9 +118,9 @@ const kSourceOfIncomeOptions = [
 
 // ── CRS No TIN Reason ──
 const kCrsNoTinReasons = {
-  'A': 'Reason A – The jurisdiction does not issue TINs to its residents.',
-  'B': 'Reason B – The account holder is unable to obtain a TIN.',
-  'C': 'Reason C – TIN is not required by the jurisdiction\'s authorities.',
+  'A': 'A — I have not been issued a TIN by the relevant jurisdiction',
+  'B': 'B — I am unable to obtain a TIN for reasons stated below',
+  'C': 'C — The jurisdiction does not issue TINs to its residents',
 };
 
 // ── PEP Relationship ──

@@ -17,8 +17,9 @@ class CrsTaxResidency(Base):
     )
 
     jurisdiction: Mapped[str] = mapped_column(String(100), nullable=False)
+    tin_status: Mapped[str | None] = mapped_column(String(10))  # "have_tin" or "no_tin"
     tin: Mapped[str | None] = mapped_column(String(100))
-    no_tin_reason: Mapped[str | None] = mapped_column(String(1))
+    no_tin_reason: Mapped[str | None] = mapped_column(String(1))  # "A", "B", or "C"
     reason_b_explanation: Mapped[str | None] = mapped_column(String(500))
 
     created_at: Mapped[datetime | None] = mapped_column(
