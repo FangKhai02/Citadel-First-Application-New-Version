@@ -157,7 +157,6 @@ class EmploymentDetailsRequest(BaseModel):
     occupation: str | None = None
     work_title: str | None = None
     nature_of_business: str | None = None
-    nature_of_business_other: str | None = None
     employer_name: str | None = None
     employer_address: str | None = None
     employer_telephone: str | None = None
@@ -172,7 +171,6 @@ class EmploymentDetailsResponse(BaseModel):
     occupation: str | None
     work_title: str | None
     nature_of_business: str | None
-    nature_of_business_other: str | None
     employer_name: str | None
     employer_address: str | None
     employer_telephone: str | None

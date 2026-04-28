@@ -13,7 +13,6 @@ const _bgPrimary   = Color(0xFF0C1829);
 const _cyan        = Color(0xFF29ABE2);
 const _cyanDim     = Color(0xFF1A7BA8);
 const _textHeading = Color(0xFFE2E8F0);
-const _textBody    = Color(0xFFCBD5E1);
 const _textMuted   = Color(0xFF64748B);
 const _borderGlass = Color(0xFF1E3A5F);
 const _errorRed    = Color(0xFFEF4444);
@@ -105,14 +104,14 @@ class _EmploymentDetailsScreenState extends State<EmploymentDetailsScreen>
       final occupationValue = _isOccupationOther
           ? _otherOccupationCtrl.text.trim()
           : _occupation;
+      final natureOfBusinessValue = _isNatureOfBusinessOther
+          ? _otherNatureOfBusinessCtrl.text.trim()
+          : _natureOfBusiness;
       final data = <String, dynamic>{
         'employment_type': _employmentType,
         'occupation': occupationValue,
         'work_title': _workTitleCtrl.text.trim(),
-        'nature_of_business': _natureOfBusiness,
-        'nature_of_business_other': _isNatureOfBusinessOther
-            ? _otherNatureOfBusinessCtrl.text.trim()
-            : null,
+        'nature_of_business': natureOfBusinessValue,
         'annual_income_range': _annualIncome,
         'estimated_net_worth': _netWorth,
       };
@@ -653,27 +652,6 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-// ── Section divider ───────────────────────────────────────────────────────────
-
-class _SectionDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 1,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            _borderGlass.withAlpha(80),
-            Colors.transparent,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Input field ────────────────────────────────────────────────────────────────
 
 class _InputField extends StatelessWidget {
@@ -753,7 +731,7 @@ class _DropdownField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       hint: Text(hint,
           style: GoogleFonts.jost(fontSize: 14, color: const Color(0xFF475569))),
       items: items

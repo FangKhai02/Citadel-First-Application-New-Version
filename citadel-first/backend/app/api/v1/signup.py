@@ -636,8 +636,6 @@ async def save_employment_details(
         record.work_title = body.work_title
     if body.nature_of_business is not None:
         record.nature_of_business = body.nature_of_business
-    if body.nature_of_business_other is not None:
-        record.nature_of_business_other = body.nature_of_business_other
     if body.employer_name is not None:
         record.employer_name = body.employer_name
     if body.employer_address is not None:

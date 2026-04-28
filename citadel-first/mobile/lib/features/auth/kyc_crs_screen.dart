@@ -126,6 +126,11 @@ class _KycCrsScreenState extends State<KycCrsScreen>
   final _maritalHistoryCtrl = TextEditingController();
   final _geoConnectionsCtrl = TextEditingController();
   final _otherInfoCtrl = TextEditingController();
+  final _otherSourceOfFundCtrl = TextEditingController();
+  final _otherSourceOfIncomeCtrl = TextEditingController();
+
+  bool get _isSourceOfFundOther => _sourceOfTrustFund == 'Others';
+  bool get _isSourceOfIncomeOther => _sourceOfIncome == 'Others';
 
   // CRS rows
   List<CrsTaxResidencyRow> _crsRows = [CrsTaxResidencyRow()];
@@ -157,6 +162,8 @@ class _KycCrsScreenState extends State<KycCrsScreen>
     _maritalHistoryCtrl.dispose();
     _geoConnectionsCtrl.dispose();
     _otherInfoCtrl.dispose();
+    _otherSourceOfFundCtrl.dispose();
+    _otherSourceOfIncomeCtrl.dispose();
     super.dispose();
   }
 
@@ -199,8 +206,16 @@ class _KycCrsScreenState extends State<KycCrsScreen>
       setState(() => _errorMessage = 'Source of trust fund is required.');
       return;
     }
+    if (_isSourceOfFundOther && _otherSourceOfFundCtrl.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please specify the source of trust fund.');
+      return;
+    }
     if (_sourceOfIncome == null) {
       setState(() => _errorMessage = 'Source of income is required.');
+      return;
+    }
+    if (_isSourceOfIncomeOther && _otherSourceOfIncomeCtrl.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please specify the source of income.');
       return;
     }
     if (_countryOfBirth == null) {
@@ -208,44 +223,31 @@ class _KycCrsScreenState extends State<KycCrsScreen>
       return;
     }
 
-    // Validate CRS rows
+    // Validate CRS rows (inline errors shown via showErrors flag)
     for (int i = 0; i < _crsRows.length; i++) {
       final row = _crsRows[i];
-      if (row.jurisdiction.isEmpty) {
-        setState(() => _errorMessage =
-            'Jurisdiction is required for tax residency row ${i + 1}.');
-        return;
-      }
-      if (row.tinStatus == null) {
-        setState(() => _errorMessage =
-            'Please indicate whether you possess a TIN for row ${i + 1}.');
-        return;
-      }
+      if (row.jurisdiction.isEmpty) { return; }
+      if (row.jurisdiction == 'Others' &&
+          (row.otherJurisdiction == null || row.otherJurisdiction!.trim().isEmpty)) { return; }
+      if (row.tinStatus == null) { return; }
       if (row.tinStatus == 'have_tin' &&
-          (row.tin == null || row.tin!.trim().isEmpty)) {
-        setState(() => _errorMessage =
-            'TIN number is required for row ${i + 1}.');
-        return;
-      }
-      if (row.tinStatus == 'no_tin' && row.noTinReason == null) {
-        setState(() => _errorMessage =
-            'Please select a reason for not possessing a TIN for row ${i + 1}.');
-        return;
-      }
+          (row.tin == null || row.tin!.trim().isEmpty)) { return; }
+      if (row.tinStatus == 'no_tin' && row.noTinReason == null) { return; }
       if (row.noTinReason == 'B' &&
-          (row.reasonBExplanation == null || row.reasonBExplanation!.trim().isEmpty)) {
-        setState(() => _errorMessage =
-            'An explanation is required when Reason B is selected for row ${i + 1}.');
-        return;
-      }
+          (row.reasonBExplanation == null || row.reasonBExplanation!.trim().isEmpty)) { return; }
     }
 
     setState(() => _isLoading = true);
     try {
       // 1. Save KYC fields
       final kycData = <String, dynamic>{
-        'source_of_trust_fund': _sourceOfTrustFund,
-        if (_sourceOfIncome != null) 'source_of_income': _sourceOfIncome,
+        'source_of_trust_fund': _isSourceOfFundOther
+            ? _otherSourceOfFundCtrl.text.trim()
+            : _sourceOfTrustFund,
+        if (_sourceOfIncome != null)
+          'source_of_income': _isSourceOfIncomeOther
+              ? _otherSourceOfIncomeCtrl.text.trim()
+              : _sourceOfIncome,
         if (_countryOfBirth != null) 'country_of_birth': _countryOfBirth,
         if (_physicallyPresent != null) 'physically_present': _physicallyPresent,
         if (_incomeCapitalCtrl.text.trim().isNotEmpty)
@@ -398,11 +400,60 @@ class _KycCrsScreenState extends State<KycCrsScreen>
                                       hint: 'Select source of trust fund',
                                       items: kSourceOfFundOptions,
                                       prefixIcon: Icons.account_balance_outlined,
-                                      onChanged: (v) =>
-                                          setState(() => _sourceOfTrustFund = v),
+                                      onChanged: (v) {
+                                        setState(() {
+                                          _sourceOfTrustFund = v;
+                                          if (v != 'Others') _otherSourceOfFundCtrl.clear();
+                                        });
+                                      },
                                       validator: (v) =>
                                           v == null ? 'This field is required' : null,
                                     ),
+                                    if (_isSourceOfFundOther) ...[
+                                      const SizedBox(height: 8),
+                                      _FieldLabel(label: 'Specify Source of Trust Fund', required: true),
+                                      const SizedBox(height: 6),
+                                      TextFormField(
+                                        controller: _otherSourceOfFundCtrl,
+                                        style: GoogleFonts.jost(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400,
+                                          color: const Color(0xFFF8FAFC),
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: 'Enter source of trust fund',
+                                          prefixIcon: Icon(Icons.edit_outlined, size: 18, color: _textMuted),
+                                          hintStyle: GoogleFonts.jost(
+                                              fontSize: 13, fontWeight: FontWeight.w300, color: const Color(0xFF475569)),
+                                          filled: true,
+                                          fillColor: _inputFill,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: _borderGlass, width: 1),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: BorderSide(color: _cyan.withAlpha(180), width: 1.5),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: _errorRed, width: 1),
+                                          ),
+                                          focusedErrorBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: _errorRed, width: 1.5),
+                                          ),
+                                          errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
+                                        ),
+                                        validator: (_) => _formSubmitted && _otherSourceOfFundCtrl.text.trim().isEmpty
+                                            ? 'Please specify the source of trust fund'
+                                            : null,
+                                        autovalidateMode: _formSubmitted
+                                            ? AutovalidateMode.always
+                                            : AutovalidateMode.disabled,
+                                      ),
+                                    ],
                                     const SizedBox(height: 22),
 
                                     // ── Source of Income (dropdown) ──
@@ -413,11 +464,60 @@ class _KycCrsScreenState extends State<KycCrsScreen>
                                       hint: 'Select source of income',
                                       items: kSourceOfIncomeOptions,
                                       prefixIcon: Icons.account_balance_wallet_outlined,
-                                      onChanged: (v) =>
-                                          setState(() => _sourceOfIncome = v),
+                                      onChanged: (v) {
+                                        setState(() {
+                                          _sourceOfIncome = v;
+                                          if (v != 'Others') _otherSourceOfIncomeCtrl.clear();
+                                        });
+                                      },
                                       validator: (v) =>
                                           v == null ? 'This field is required' : null,
                                     ),
+                                    if (_isSourceOfIncomeOther) ...[
+                                      const SizedBox(height: 8),
+                                      _FieldLabel(label: 'Specify Source of Income', required: true),
+                                      const SizedBox(height: 6),
+                                      TextFormField(
+                                        controller: _otherSourceOfIncomeCtrl,
+                                        style: GoogleFonts.jost(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400,
+                                          color: const Color(0xFFF8FAFC),
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: 'Enter source of income',
+                                          prefixIcon: Icon(Icons.edit_outlined, size: 18, color: _textMuted),
+                                          hintStyle: GoogleFonts.jost(
+                                              fontSize: 13, fontWeight: FontWeight.w300, color: const Color(0xFF475569)),
+                                          filled: true,
+                                          fillColor: _inputFill,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: _borderGlass, width: 1),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: BorderSide(color: _cyan.withAlpha(180), width: 1.5),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: _errorRed, width: 1),
+                                          ),
+                                          focusedErrorBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: _errorRed, width: 1.5),
+                                          ),
+                                          errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
+                                        ),
+                                        validator: (_) => _formSubmitted && _otherSourceOfIncomeCtrl.text.trim().isEmpty
+                                            ? 'Please specify the source of income'
+                                            : null,
+                                        autovalidateMode: _formSubmitted
+                                            ? AutovalidateMode.always
+                                            : AutovalidateMode.disabled,
+                                      ),
+                                    ],
                                     const SizedBox(height: 22),
 
                                     // ── Country of Birth ──
@@ -533,6 +633,7 @@ class _KycCrsScreenState extends State<KycCrsScreen>
                                         index: i,
                                         row: _crsRows[i],
                                         canDelete: _crsRows.length > 1,
+                                        showErrors: _formSubmitted,
                                         onUpdate: (updated) =>
                                             _updateCrsRow(i, updated),
                                         onDelete: () => _removeCrsRow(i),
@@ -943,6 +1044,7 @@ class _CrsRowCard extends StatefulWidget {
   final int index;
   final CrsTaxResidencyRow row;
   final bool canDelete;
+  final bool showErrors;
   final ValueChanged<CrsTaxResidencyRow> onUpdate;
   final VoidCallback onDelete;
 
@@ -951,6 +1053,7 @@ class _CrsRowCard extends StatefulWidget {
     required this.index,
     required this.row,
     required this.canDelete,
+    this.showErrors = false,
     required this.onUpdate,
     required this.onDelete,
   });
@@ -1061,11 +1164,16 @@ class _CrsRowCardState extends State<_CrsRowCard> {
                 otherJurisdiction: v == 'Others' ? (row.otherJurisdiction ?? '') : null,
               ));
             },
+            validator: (v) => widget.showErrors && (v == null || v.isEmpty)
+                ? 'Please select a jurisdiction'
+                : null,
           ),
 
           // Show "Others" text field when "Others" is selected
           if (row.jurisdiction == 'Others') ...[
             const SizedBox(height: 8),
+            _FieldLabel(label: 'Specify Jurisdiction', required: true),
+            const SizedBox(height: 6),
             TextFormField(
               controller: _otherJurisdictionCtrl,
               style: GoogleFonts.jost(
@@ -1100,6 +1208,13 @@ class _CrsRowCardState extends State<_CrsRowCard> {
                 ),
                 errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
               ),
+              validator: (_) => widget.showErrors &&
+                  (_otherJurisdictionCtrl.text.trim().isEmpty)
+                  ? 'Please enter the jurisdiction name'
+                  : null,
+              autovalidateMode: widget.showErrors
+                  ? AutovalidateMode.always
+                  : AutovalidateMode.disabled,
               onChanged: (v) {
                 widget.onUpdate(row.copyWith(otherJurisdiction: v));
               },
@@ -1110,35 +1225,52 @@ class _CrsRowCardState extends State<_CrsRowCard> {
           // ── TIN Status Selection ──
           _FieldLabel(label: 'Tax Identification Number (TIN) Status', required: true),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              _TinStatusChip(
-                label: 'I Possess a TIN',
-                selected: row.tinStatus == 'have_tin',
-                onTap: () {
-                  widget.onUpdate(row.copyWith(
-                    tinStatus: 'have_tin',
-                    noTinReason: null,
-                    reasonBExplanation: null,
-                  ));
-                },
-              ),
-              const SizedBox(width: 12),
-              _TinStatusChip(
-                label: 'I Do Not Possess a TIN',
-                selected: row.tinStatus == 'no_tin',
-                onTap: () {
-                  widget.onUpdate(row.copyWith(
-                    tinStatus: 'no_tin',
-                    tin: null,
-                    noTinReason: null,
-                    reasonBExplanation: null,
-                  ));
-                  _tinCtrl.clear();
-                },
-              ),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _TinStatusChip(
+                    label: 'I Possess a TIN',
+                    selected: row.tinStatus == 'have_tin',
+                    hasError: widget.showErrors && row.tinStatus == null,
+                    onTap: () {
+                      widget.onUpdate(row.copyWith(
+                        tinStatus: 'have_tin',
+                        noTinReason: null,
+                        reasonBExplanation: null,
+                      ));
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _TinStatusChip(
+                    label: 'I Do Not Possess a TIN',
+                    selected: row.tinStatus == 'no_tin',
+                    hasError: widget.showErrors && row.tinStatus == null,
+                    onTap: () {
+                      widget.onUpdate(row.copyWith(
+                        tinStatus: 'no_tin',
+                        tin: null,
+                        noTinReason: null,
+                        reasonBExplanation: null,
+                      ));
+                      _tinCtrl.clear();
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
+          if (widget.showErrors && row.tinStatus == null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 12),
+              child: Text(
+                'Please select your TIN status',
+                style: GoogleFonts.jost(fontSize: 12, color: _errorRed),
+              ),
+            ),
 
           // ── Conditional: TIN Number (when "I Possess a TIN") ──
           if (row.tinStatus == 'have_tin') ...[
@@ -1181,6 +1313,13 @@ class _CrsRowCardState extends State<_CrsRowCard> {
                 ),
                 errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
               ),
+              validator: (_) => widget.showErrors &&
+                  _tinCtrl.text.trim().isEmpty
+                  ? 'Please enter your TIN number'
+                  : null,
+              autovalidateMode: widget.showErrors
+                  ? AutovalidateMode.always
+                  : AutovalidateMode.disabled,
               onChanged: (v) {
                 widget.onUpdate(row.copyWith(tin: v));
               },
@@ -1213,6 +1352,9 @@ class _CrsRowCardState extends State<_CrsRowCard> {
                   ));
                 }
               },
+              validator: (v) => widget.showErrors && (v == null || v.isEmpty)
+                  ? 'Please select a reason'
+                  : null,
             ),
 
             // Conditional explanation field for Reason B
@@ -1259,6 +1401,13 @@ class _CrsRowCardState extends State<_CrsRowCard> {
                   ),
                   errorStyle: GoogleFonts.jost(fontSize: 12, color: _errorRed),
                 ),
+                validator: (_) => widget.showErrors &&
+                    _reasonBCtrl.text.trim().isEmpty
+                    ? 'Please provide an explanation'
+                    : null,
+                autovalidateMode: widget.showErrors
+                    ? AutovalidateMode.always
+                    : AutovalidateMode.disabled,
                 onChanged: (v) {
                   widget.onUpdate(row.copyWith(reasonBExplanation: v));
                 },
@@ -1276,40 +1425,40 @@ class _CrsRowCardState extends State<_CrsRowCard> {
 class _TinStatusChip extends StatelessWidget {
   final String label;
   final bool selected;
+  final bool hasError;
   final VoidCallback onTap;
 
   const _TinStatusChip({
     required this.label,
     required this.selected,
+    this.hasError = false,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: selected ? _cyan.withAlpha(30) : Colors.white.withAlpha(6),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? _cyan : _borderGlass,
-              width: 1,
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? _cyan.withAlpha(30) : Colors.white.withAlpha(6),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? _cyan : (hasError ? _errorRed : _borderGlass),
+            width: 1,
           ),
-          child: Center(
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.jost(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w300,
-                color: selected ? _cyan : _textBody,
-                height: 1.3,
-              ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.jost(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w300,
+              color: selected ? _cyan : _textBody,
+              height: 1.3,
             ),
           ),
         ),
