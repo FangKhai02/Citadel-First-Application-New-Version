@@ -12,6 +12,7 @@ class ApiEndpoints {
 
   // Users
   static const String me = '/users/me';
+  static const String userMeDetails = '/users/me/details';
 
   // Signup flow
   static const String bankruptcyDeclaration = '/signup/bankruptcy-declaration';
@@ -42,4 +43,18 @@ class ApiEndpoints {
   // Auth
   static const String incompleteSignup = '/auth/incomplete-signup';
   static const String resendVerification = '/auth/resend-verification';
+
+  // Beneficiaries
+  static const String beneficiaries = '/signup/beneficiaries';
+  static const String beneficiaryPresignedUrl = '/signup/beneficiaries/presigned-url';
+
+  // Notifications
+  static const String notifications = '/notifications';
+  static const String notificationReadAll = '/notifications/read-all';
+
+  // Trust Orders
+  static const String trustOrders = '/trust-orders';
+  static const String trustOrderMe = '/trust-orders/me';
+  static const String trustOrderPresignedUrl = '/trust-orders/presigned-url';
+  static const String trustProductCwdDeckUrl = '/trust-orders/products/cwd-deck-url';
 }

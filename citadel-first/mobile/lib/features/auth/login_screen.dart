@@ -137,7 +137,12 @@ class _LoginViewState extends State<_LoginView>
       listener: (context, state) {
         if (state is LoginSuccess) {
           context.read<AuthBloc>().add(
-            AuthLoginSucceeded(userType: state.userType, userId: state.userId),
+            AuthLoginSucceeded(
+              userType: state.userType,
+              userId: state.userId,
+              name: state.name,
+              hasBeneficiaries: state.hasBeneficiaries,
+            ),
           );
           context.go(state.userType == 'AGENT' ? '/agent/dashboard' : '/client/dashboard');
         } else if (state is LoginFailure) {

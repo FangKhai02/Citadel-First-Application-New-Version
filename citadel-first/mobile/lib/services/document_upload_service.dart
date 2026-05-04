@@ -1,3 +1,4 @@
+// ignore_for_file: use_null_aware_elements
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../core/api/api_client.dart';
@@ -71,16 +72,17 @@ class DocumentUploadService {
     required String? nationality,
     required String? address,
   }) async {
+    final data = <String, dynamic>{
+      if (name != null) 'name': name,
+      if (identityCardNumber != null) 'identity_card_number': identityCardNumber,
+      if (dob != null) 'dob': dob.toIso8601String().split('T').first,
+      if (gender != null) 'gender': gender,
+      if (nationality != null) 'nationality': nationality,
+      if (address != null) 'address': address,
+    };
     await _client.patch(
       ApiEndpoints.identityDocument,
-      data: {
-        if (name != null) 'name': name,
-        if (identityCardNumber != null) 'identity_card_number': identityCardNumber,
-        if (dob != null) 'dob': dob.toIso8601String().split('T').first,
-        if (gender != null) 'gender': gender,
-        if (nationality != null) 'nationality': nationality,
-        if (address != null) 'address': address,
-      },
+      data: data,
     );
   }
 }

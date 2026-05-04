@@ -16,6 +16,7 @@ import app.models.user_details  # noqa: F401  – registers UserDetails
 import app.models.face_verification  # noqa: F401  – registers FaceVerification
 import app.models.pep_declaration  # noqa: F401  – registers PepDeclaration
 import app.models.crs_tax_residency  # noqa: F401  – registers CrsTaxResidency
+import app.models.beneficiary  # noqa: F401  – registers Beneficiary
 
 logging.basicConfig(
     level=logging.INFO,

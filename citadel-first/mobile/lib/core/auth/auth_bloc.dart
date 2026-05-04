@@ -32,6 +32,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final userId = res.data['id'] as int;
       final signupCompleted = res.data['signup_completed'] as bool? ?? true;
       final emailVerified = res.data['email_verified'] as bool? ?? true;
+      final name = res.data['name'] as String?;
+      final hasBeneficiaries = res.data['has_beneficiaries'] as bool? ?? false;
+      final unreadNotificationCount = res.data['unread_notification_count'] as int? ?? 0;
 
       if (!signupCompleted) {
         // Incomplete signup — clean up and force re-registration
@@ -54,6 +57,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         userType: userType,
         userId: userId,
         signupCompleted: signupCompleted,
+        name: name,
+        hasBeneficiaries: hasBeneficiaries,
+        unreadNotificationCount: unreadNotificationCount,
       ));
     } catch (_) {
       await SecureStorage.clearAll();
@@ -68,6 +74,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthAuthenticated(
       userType: event.userType,
       userId: event.userId,
+      name: event.name,
+      hasBeneficiaries: event.hasBeneficiaries,
     ));
   }
 

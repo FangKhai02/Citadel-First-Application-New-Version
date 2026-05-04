@@ -1,0 +1,130 @@
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.v1.signup import get_current_signup_user
+from app.core.database import get_db
+from app.models.trust_order import TrustOrder
+from app.models.user import AppUser
+from app.schemas.trust_order import (
+    TrustOrderCreateRequest,
+    TrustOrderListResponse,
+    TrustOrderResponse,
+)
+from app.schemas.user_details import PresignedUrlRequest, PresignedUrlResponse
+from app.services.s3_service import generate_presigned_download_url, generate_presigned_upload_url
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/trust-orders", tags=["Trust Orders"])
+
+CWD_DECK_S3_KEY = "trust-products/cwd-trust-deck.pdf"
+
+
+@router.post(
+    "",
+    response_model=TrustOrderResponse,
+    summary="Create a trust order",
+    description="Submits a trust product purchase application.",
+)
+async def create_trust_order(
+    body: TrustOrderCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    record = TrustOrder(
+        app_user_id=current_user.id,
+        date_of_trust_deed=body.date_of_trust_deed,
+        trust_asset_amount=body.trust_asset_amount,
+        advisor_name=body.advisor_name,
+        advisor_nric=body.advisor_nric,
+        projected_yield_schedule_key=body.projected_yield_schedule_key,
+        acknowledgement_receipt_key=body.acknowledgement_receipt_key,
+    )
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+
+    logger.info(
+        "TRUST_ORDER_CREATED user_id=%d order_id=%d",
+        current_user.id,
+        record.id,
+    )
+    return TrustOrderResponse.model_validate(record)
+
+
+@router.get(
+    "/me",
+    response_model=TrustOrderListResponse,
+    summary="List my trust orders",
+    description="Returns all non-deleted trust orders for the current user.",
+)
+async def list_my_trust_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    result = await db.execute(
+        select(TrustOrder)
+        .where(
+            TrustOrder.app_user_id == current_user.id,
+            TrustOrder.is_deleted == False,
+        )
+        .order_by(TrustOrder.id.desc())
+    )
+    orders = result.scalars().all()
+    return TrustOrderListResponse(
+        orders=[TrustOrderResponse.model_validate(o) for o in orders],
+    )
+
+
+@router.get(
+    "/{order_id}",
+    response_model=TrustOrderResponse,
+    summary="Get a trust order",
+    description="Returns a single trust order by ID.",
+)
+async def get_trust_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    result = await db.execute(
+        select(TrustOrder).where(
+            TrustOrder.id == order_id,
+            TrustOrder.app_user_id == current_user.id,
+            TrustOrder.is_deleted == False,
+        )
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trust order not found.")
+    return TrustOrderResponse.model_validate(record)
+
+
+@router.post(
+    "/presigned-url",
+    response_model=PresignedUrlResponse,
+    summary="Generate presigned URL for trust order attachment upload",
+)
+async def trust_order_presigned_url(
+    body: PresignedUrlRequest,
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    key = f"trust-orders/{current_user.id}/{body.filename}"
+    upload_url = generate_presigned_upload_url(key=key, content_type=body.content_type)
+    logger.info("TRUST_ORDER_PRESIGNED_URL user_id=%d key=%s", current_user.id, key)
+    return PresignedUrlResponse(upload_url=upload_url, key=key)
+
+
+@router.get(
+    "/products/cwd-deck-url",
+    summary="Get CWD Trust Deck PDF download URL",
+    description="Returns a presigned S3 URL to download the CWD Trust Presentation Deck PDF.",
+)
+async def get_cwd_deck_url(
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    download_url = generate_presigned_download_url(key=CWD_DECK_S3_KEY, expires_in=600)
+    return {"download_url": download_url}

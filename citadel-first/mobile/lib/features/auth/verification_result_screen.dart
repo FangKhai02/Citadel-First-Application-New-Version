@@ -10,7 +10,6 @@ const _cyan         = Color(0xFF29ABE2);
 const _cyanDim      = Color(0xFF1A7BA8);
 const _textHeading  = Color(0xFFE2E8F0);
 const _textBody     = Color(0xFFCBD5E1);
-const _textMuted    = Color(0xFF64748B);
 const _borderGlass  = Color(0xFF1E3A5F);
 const _successGreen = Color(0xFF22C55E);
 const _errorRed     = Color(0xFFEF4444);

@@ -273,9 +273,12 @@ class _KycCrsScreenState extends State<KycCrsScreen>
           if (r.tinStatus == 'have_tin' && r.tin != null && r.tin!.trim().isNotEmpty) {
             map['tin'] = r.tin!.trim();
           }
-          if (r.noTinReason != null) map['no_tin_reason'] = r.noTinReason;
-          if (r.reasonBExplanation != null && r.reasonBExplanation!.trim().isNotEmpty)
+          if (r.noTinReason != null) {
+            map['no_tin_reason'] = r.noTinReason;
+          }
+          if (r.reasonBExplanation != null && r.reasonBExplanation!.trim().isNotEmpty) {
             map['reason_b_explanation'] = r.reasonBExplanation!.trim();
+          }
           return map;
         }).toList(),
       };
@@ -880,7 +883,8 @@ class _DropdownField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      key: ValueKey('dropdown_${value ?? 'null'}'),
+      initialValue: value,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       isExpanded: true,
       hint: Text(
@@ -990,6 +994,7 @@ class _MultilineField extends StatelessWidget {
   const _MultilineField({
     required this.controller,
     required this.hint,
+    // ignore: unused_element_parameter
     this.validator,
   });
 

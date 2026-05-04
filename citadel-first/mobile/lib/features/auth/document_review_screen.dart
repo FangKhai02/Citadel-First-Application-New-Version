@@ -486,14 +486,18 @@ class _FieldRow extends StatelessWidget {
   final int? minLines;
   final String? error;
 
+  // ignore: unused_element_parameter
   const _FieldRow({
     required this.icon,
     required this.label,
     required this.controller,
     required this.hint,
+    // ignore: unused_element_parameter
     this.keyboardType,
     this.textCapitalization = TextCapitalization.none,
+    // ignore: unused_element_parameter
     this.maxLines = 1,
+    // ignore: unused_element_parameter
     this.minLines,
     this.error,
   });

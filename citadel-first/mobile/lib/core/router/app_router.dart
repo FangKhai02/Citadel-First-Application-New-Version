@@ -24,8 +24,16 @@ import '../../features/auth/pep_declaration_screen.dart';
 import '../../features/auth/onboarding_agreement_screen.dart';
 import '../../features/auth/signup_success_screen.dart';
 import '../../features/client/dashboard/client_dashboard_screen.dart';
+import '../../features/client/beneficiary/beneficiary_summary_screen.dart';
+import '../../features/client/beneficiary/beneficiary_form_screen.dart';
+import '../../features/client/notifications/notification_screen.dart';
+import '../../features/client/profile/profile_screen.dart';
+import '../../features/client/trust/product/pdf_viewer_screen.dart';
+import '../../features/client/trust/purchase/trust_purchase_screen.dart';
+import '../../features/client/trust/purchase/trust_submission_success_screen.dart';
 import '../../features/agent/dashboard/agent_dashboard_screen.dart';
 import '../../models/document_upload.dart';
+import '../../models/beneficiary.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -60,7 +68,9 @@ final appRouter = GoRouter(
     }
 
     if (authState is AuthAuthenticated) {
-      if (!onSignupFlow) {
+      // Only redirect away from login/signup pages when authenticated
+      final onAuthPage = onLogin || onSignup || onRegister;
+      if (onAuthPage) {
         return _dashboardRoute(authState.userType);
       }
     } else if (authState is AuthUnauthenticated) {
@@ -159,6 +169,20 @@ final appRouter = GoRouter(
       return const SignupSuccessScreen();
     }),
     GoRoute(path: '/client/dashboard', builder: (context, state) => const ClientDashboardScreen()),
+    GoRoute(path: '/client/beneficiary-summary', builder: (context, state) => const BeneficiarySummaryScreen()),
+    GoRoute(path: '/client/beneficiary-form', builder: (context, state) {
+      final extra = state.extra as Map<String, dynamic>?;
+      return BeneficiaryFormScreen(
+        beneficiaryType: extra?['beneficiaryType'] as String? ?? 'post_demise',
+        existingBeneficiaryId: extra?['existingBeneficiaryId'] as int?,
+        existingBeneficiary: extra?['existingBeneficiary'] as Beneficiary?,
+      );
+    }),
+    GoRoute(path: '/client/profile', builder: (context, state) => const ProfileScreen()),
+    GoRoute(path: '/client/notifications', builder: (context, state) => const NotificationScreen()),
+    GoRoute(path: '/client/trust-product-detail', builder: (context, state) => const PdfViewerScreen()),
+    GoRoute(path: '/client/trust-purchase', builder: (context, state) => const TrustPurchaseScreen()),
+    GoRoute(path: '/client/trust-purchase-success', builder: (context, state) => const TrustSubmissionSuccessScreen()),
     GoRoute(path: '/agent/dashboard', builder: (context, state) => const AgentDashboardScreen()),
   ],
 );

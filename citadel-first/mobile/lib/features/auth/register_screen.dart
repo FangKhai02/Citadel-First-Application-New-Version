@@ -136,8 +136,12 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (a.isEmpty) return b.length;
     if (b.isEmpty) return a.length;
     final dp = List.generate(a.length + 1, (_) => List.filled(b.length + 1, 0));
-    for (int i = 0; i <= a.length; i++) dp[i][0] = i;
-    for (int j = 0; j <= b.length; j++) dp[0][j] = j;
+    for (int i = 0; i <= a.length; i++) {
+      dp[i][0] = i;
+    }
+    for (int j = 0; j <= b.length; j++) {
+      dp[0][j] = j;
+    }
     for (int i = 1; i <= a.length; i++) {
       for (int j = 1; j <= b.length; j++) {
         final cost = a[i - 1] == b[j - 1] ? 0 : 1;

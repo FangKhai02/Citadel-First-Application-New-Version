@@ -1,4 +1,5 @@
 /// Dropdown option constants for the post-eKYC information capture pages.
+library;
 
 // ── Title ──
 const kTitleOptions = [

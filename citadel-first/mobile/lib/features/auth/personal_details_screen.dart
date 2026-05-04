@@ -132,7 +132,6 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen>
               surface: Color(0xFF0F172A),
               onSurface: _textBody,
             ),
-            dialogBackgroundColor: const Color(0xFF0F172A),
           ),
           child: child!,
         );
@@ -470,41 +469,6 @@ class _PageBackground extends StatelessWidget {
   }
 }
 
-// ── Top bar ────────────────────────────────────────────────────────────────────
-
-class _TopBar extends StatelessWidget {
-  final VoidCallback onBack;
-  const _TopBar({required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 20, 12),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onBack,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(6),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _borderGlass, width: 1),
-              ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: _textHeading,
-                size: 17,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Field label ───────────────────────────────────────────────────────────────
 
 class _FieldLabel extends StatelessWidget {
@@ -563,7 +527,8 @@ class _DropdownField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      key: ValueKey('dropdown_${value ?? 'null'}'),
+      initialValue: value,
       hint: Text(
         hint,
         style: GoogleFonts.jost(fontSize: 14, color: const Color(0xFF475569)),

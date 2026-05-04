@@ -15,9 +15,11 @@ class AuthCheckRequested extends AuthEvent {
 class AuthLoginSucceeded extends AuthEvent {
   final String userType;
   final int userId;
-  const AuthLoginSucceeded({required this.userType, required this.userId});
+  final String? name;
+  final bool hasBeneficiaries;
+  const AuthLoginSucceeded({required this.userType, required this.userId, this.name, this.hasBeneficiaries = false});
   @override
-  List<Object?> get props => [userType, userId];
+  List<Object?> get props => [userType, userId, name, hasBeneficiaries];
 }
 
 /// Fired when user taps logout.

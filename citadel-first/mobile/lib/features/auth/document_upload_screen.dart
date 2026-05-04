@@ -215,6 +215,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
       ),
     );
     if (source == null) return;
+    if (!mounted) return;
 
     if (source == ImageSource.camera) {
       // Use custom camera
@@ -1368,7 +1369,7 @@ class _DocumentFrameOverlayState extends State<_DocumentFrameOverlay>
           children: [
             AnimatedBuilder(
               animation: _scanAnim,
-              builder: (_, __) => CustomPaint(
+              builder: (_, _) => CustomPaint(
                 size: Size(w, h),
                 painter: _FramePainter(
                   frameRect: frameRect,
