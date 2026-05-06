@@ -109,4 +109,19 @@ class TrustOrder extends Equatable {
 
   @override
   List<Object?> get props => [id, caseStatus];
+
+  /// Display helper: returns value or "N/A" for null fields.
+  String display(String? value) => value ?? 'N/A';
+
+  /// Display helper: formats a DateTime or returns "N/A".
+  String displayDate(DateTime? date) {
+    if (date == null) return 'N/A';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  /// Display helper: formats the trust asset amount or returns "N/A".
+  String get displayAssetAmount {
+    if (trustAssetAmount == null) return 'N/A';
+    return 'RM ${trustAssetAmount!.toStringAsFixed(2).replaceAll(RegExp(r'\B(?=(\d{3})+(?!\d))'), ',')}';
+  }
 }

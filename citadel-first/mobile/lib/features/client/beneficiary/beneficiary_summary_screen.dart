@@ -613,10 +613,10 @@ class _BeneficiaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = beneficiary.fullName ?? 'Unnamed';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final relationship = beneficiary.relationshipToSettlor ?? '—';
-    final sharePct = beneficiary.sharePercentage?.toStringAsFixed(0) ?? '0';
+    final name = beneficiary.fullName ?? 'N/A';
+    final initial = name != 'N/A' && name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final relationship = beneficiary.relationshipToSettlor ?? 'N/A';
+    final sharePct = beneficiary.sharePercentage?.toStringAsFixed(0) ?? 'N/A';
 
     return Container(
       decoration: BoxDecoration(

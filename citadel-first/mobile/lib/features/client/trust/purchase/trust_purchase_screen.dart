@@ -14,7 +14,8 @@ class TrustPurchaseScreen extends StatefulWidget {
   State<TrustPurchaseScreen> createState() => _TrustPurchaseScreenState();
 }
 
-class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
+class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
+    with SingleTickerProviderStateMixin {
   final _pageController = PageController();
   int _currentStep = 0;
 
@@ -26,10 +27,26 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
   DateTime? _selectedDate;
 
   bool _submitting = false;
-  final _formKey = GlobalKey<FormState>();
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _animController.forward();
+
+    // Listen to amount changes for real-time validation
+    _trustAssetAmountCtrl.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
+    _animController.dispose();
     _pageController.dispose();
     _dateOfTrustDeedCtrl.dispose();
     _trustAssetAmountCtrl.dispose();
@@ -47,20 +64,24 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
   void _nextStep() {
     if (_currentStep < 1 && _isStepValid) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
       );
       setState(() => _currentStep++);
+      _animController.reset();
+      _animController.forward();
     }
   }
 
   void _prevStep() {
     if (_currentStep > 0) {
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
       );
       setState(() => _currentStep--);
+      _animController.reset();
+      _animController.forward();
     }
   }
 
@@ -77,6 +98,9 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
             onPrimary: Colors.white,
             surface: CitadelColors.surface,
             onSurface: CitadelColors.textPrimary,
+          ),
+          dialogTheme: DialogThemeData(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           ),
         ),
         child: child!,
@@ -149,16 +173,13 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
         children: [
           _StepIndicator(currentStep: _currentStep),
           Expanded(
-            child: Form(
-              key: _formKey,
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildTrustInfoStep(),
-                  _buildReviewStep(),
-                ],
-              ),
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _buildTrustInfoStep(),
+                _buildReviewStep(),
+              ],
             ),
           ),
           _buildBottomBar(),
@@ -167,203 +188,431 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
     );
   }
 
+  // ── Step 1: Trust Information ──
+
   Widget _buildTrustInfoStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Trust Information',
-            style: GoogleFonts.jost(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: CitadelColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Provide the details for your trust application.',
-            style: GoogleFonts.jost(fontSize: 13, color: CitadelColors.textMuted),
-          ),
-          const SizedBox(height: 28),
-          _buildFieldLabel('Date of Trust Deed *'),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () => _selectDate(context),
-            child: AbsorbPointer(
-              child: TextFormField(
-                controller: _dateOfTrustDeedCtrl,
-                style: GoogleFonts.jost(color: CitadelColors.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Select date',
-                  hintStyle: GoogleFonts.jost(color: CitadelColors.textMuted),
-                  prefixIcon: const Icon(Icons.calendar_today, color: CitadelColors.primary, size: 20),
-                  filled: true,
-                  fillColor: CitadelColors.surfaceLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: CitadelColors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: CitadelColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: CitadelColors.primary),
-                  ),
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with icon
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [CitadelColors.primary, CitadelColors.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.account_balance, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Trust Information',
+                          style: GoogleFonts.jost(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Provide details for your trust application',
+                          style: GoogleFonts.jost(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _buildFieldLabel('Trust Asset Amount (RM) *'),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _trustAssetAmountCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,.]*$'))],
-            style: GoogleFonts.jost(color: CitadelColors.textPrimary, fontSize: 15),
-            decoration: InputDecoration(
-              hintText: 'Enter amount',
-              hintStyle: GoogleFonts.jost(color: CitadelColors.textMuted),
-              prefixText: 'RM ',
-              prefixStyle: GoogleFonts.jost(color: CitadelColors.primary, fontWeight: FontWeight.w600),
-              filled: true,
-              fillColor: CitadelColors.surfaceLight,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: CitadelColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: CitadelColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: CitadelColors.primary),
+            const SizedBox(height: 24),
+
+            // Required fields section
+            _buildSectionLabel('Required Details'),
+            const SizedBox(height: 12),
+
+            // Date of Trust Deed
+            _buildAnimatedField(
+              index: 0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabelWithIcon('Date of Trust Deed', Icons.calendar_today),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _selectDate(context),
+                    child: AbsorbPointer(
+                      child: TextFormField(
+                        controller: _dateOfTrustDeedCtrl,
+                        style: GoogleFonts.jost(
+                          color: CitadelColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Select date',
+                          hintStyle: GoogleFonts.jost(color: CitadelColors.textMuted),
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            child: Icon(
+                              Icons.event_rounded,
+                              color: _selectedDate != null
+                                  ? CitadelColors.primary
+                                  : CitadelColors.textMuted,
+                              size: 20,
+                            ),
+                          ),
+                          suffixIcon: _selectedDate != null
+                              ? const Icon(Icons.check_circle, color: CitadelColors.success, size: 20)
+                              : null,
+                          filled: true,
+                          fillColor: CitadelColors.surfaceLight,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: CitadelColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: _selectedDate != null
+                                  ? CitadelColors.primary.withValues(alpha: 0.5)
+                                  : CitadelColors.border,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: CitadelColors.primary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _buildFieldLabel('Advisor Name'),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _advisorNameCtrl,
-            style: GoogleFonts.jost(color: CitadelColors.textPrimary, fontSize: 15),
-            decoration: _inputDecoration('Enter advisor name (optional)'),
-          ),
-          const SizedBox(height: 20),
-          _buildFieldLabel('Advisor NRIC'),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _advisorNricCtrl,
-            maxLength: 12,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: GoogleFonts.jost(color: CitadelColors.textPrimary, fontSize: 15),
-            decoration: _inputDecoration('Enter advisor NRIC (optional)').copyWith(
-              counterText: '',
+            const SizedBox(height: 18),
+
+            // Trust Asset Amount
+            _buildAnimatedField(
+              index: 1,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabelWithIcon('Trust Asset Amount (RM)', Icons.payments_outlined),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _trustAssetAmountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,.]*$'))],
+                    style: GoogleFonts.jost(
+                      color: CitadelColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter amount',
+                      hintStyle: GoogleFonts.jost(color: CitadelColors.textMuted),
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          Icons.attach_money,
+                          color: _trustAssetAmountCtrl.text.isNotEmpty
+                              ? CitadelColors.primary
+                              : CitadelColors.textMuted,
+                          size: 20,
+                        ),
+                      ),
+                      prefixText: 'RM ',
+                      prefixStyle: GoogleFonts.jost(
+                        color: CitadelColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      suffixIcon: _trustAssetAmountCtrl.text.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(Icons.check_circle, color: CitadelColors.success, size: 20),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: CitadelColors.surfaceLight,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CitadelColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: _trustAssetAmountCtrl.text.isNotEmpty
+                              ? CitadelColors.primary.withValues(alpha: 0.5)
+                              : CitadelColors.border,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CitadelColors.primary, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 32),
+
+            // Optional fields section
+            _buildSectionLabel('Optional Details'),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Advisor information can be added now or later',
+                style: GoogleFonts.jost(fontSize: 11, color: CitadelColors.textMuted),
+              ),
+            ),
+
+            // Advisor Name
+            _buildAnimatedField(
+              index: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabelWithIcon('Advisor Name', Icons.person_outline),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _advisorNameCtrl,
+                    style: GoogleFonts.jost(
+                      color: CitadelColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: _inputDecoration('Enter advisor name (optional)'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Advisor NRIC
+            _buildAnimatedField(
+              index: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabelWithIcon('Advisor NRIC', Icons.badge_outlined),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _advisorNricCtrl,
+                    maxLength: 12,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    style: GoogleFonts.jost(
+                      color: CitadelColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: _inputDecoration('Enter advisor NRIC (optional)').copyWith(
+                      counterText: '',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
+
+  // ── Step 2: Review ──
 
   Widget _buildReviewStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Review & Submit',
-            style: GoogleFonts.jost(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: CitadelColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Please review your application details before submitting.',
-            style: GoogleFonts.jost(fontSize: 13, color: CitadelColors.textMuted),
-          ),
-          const SizedBox(height: 28),
-          _buildReviewSection('Trust Information', [
-            _reviewRow('Date of Trust Deed', _dateOfTrustDeedCtrl.text.isEmpty ? 'Not provided' : _dateOfTrustDeedCtrl.text),
-            _reviewRow('Trust Asset Amount', _trustAssetAmountCtrl.text.isEmpty ? 'Not provided' : 'RM ${_trustAssetAmountCtrl.text}'),
-            _reviewRow('Advisor Name', _advisorNameCtrl.text.isEmpty ? 'Not provided' : _advisorNameCtrl.text),
-            _reviewRow('Advisor NRIC', _advisorNricCtrl.text.isEmpty ? 'Not provided' : _advisorNricCtrl.text),
-          ]),
-        ],
-      ),
-    );
-  }
+    final dateVal = _dateOfTrustDeedCtrl.text.isEmpty ? 'N/A' : _dateOfTrustDeedCtrl.text;
+    final amountVal = _trustAssetAmountCtrl.text.isEmpty ? 'N/A' : 'RM ${_trustAssetAmountCtrl.text}';
+    final advisorVal = _advisorNameCtrl.text.isEmpty ? 'N/A' : _advisorNameCtrl.text;
+    final nricVal = _advisorNricCtrl.text.isEmpty ? 'N/A' : _advisorNricCtrl.text;
 
-  Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: CitadelColors.surface,
-        border: Border(top: BorderSide(color: CitadelColors.border)),
-      ),
-      child: Row(
-        children: [
-          if (_currentStep > 0)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _prevStep,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: CitadelColors.primary,
-                  side: const BorderSide(color: CitadelColors.primary),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [CitadelColors.primary, CitadelColors.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Text('Back', style: GoogleFonts.jost(fontWeight: FontWeight.w600)),
+                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-          if (_currentStep > 0) const SizedBox(width: 12),
-          Expanded(
-            flex: _currentStep > 0 ? 2 : 1,
-            child: ElevatedButton(
-              onPressed: _currentStep == 1
-                  ? (_submitting ? null : _submitOrder)
-                  : (_isStepValid ? _nextStep : null),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: CitadelColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: CitadelColors.primary.withValues(alpha: 0.4),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(
-                      _currentStep == 1 ? 'Submit Application' : 'Next',
-                      style: GoogleFonts.jost(fontWeight: FontWeight.w600),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    child: const Icon(Icons.fact_check_outlined, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Review & Submit',
+                          style: GoogleFonts.jost(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Verify your details before submitting',
+                          style: GoogleFonts.jost(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+
+            // ── Trust Information Card ──
+            _buildReviewCard(
+              icon: Icons.account_balance_outlined,
+              iconColor: CitadelColors.primary,
+              title: 'Trust Information',
+              items: [
+                _ReviewItem(icon: Icons.event_rounded, label: 'Date of Trust Deed', value: dateVal, required: true),
+                _ReviewItem(icon: Icons.payments_outlined, label: 'Trust Asset Amount', value: amountVal, required: true),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // ── Advisor Card ──
+            _buildReviewCard(
+              icon: Icons.person_outline,
+              iconColor: CitadelColors.warning,
+              title: 'Advisor Details',
+              items: [
+                _ReviewItem(icon: Icons.person, label: 'Advisor Name', value: advisorVal, required: false),
+                _ReviewItem(icon: Icons.badge, label: 'Advisor NRIC', value: nricVal, required: false),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // ── Notice ──
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: CitadelColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: CitadelColors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: CitadelColors.primary, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'By submitting, you confirm that the information provided is accurate. '
+                      'Vanguard Trustee Berhad will review your application.',
+                      style: GoogleFonts.jost(
+                        fontSize: 12,
+                        color: CitadelColors.textSecondary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFieldLabel(String label) {
-    return Text(
-      label,
-      style: GoogleFonts.jost(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: CitadelColors.textSecondary,
+  // ── Shared Builders ──
+
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Text(
+        label,
+        style: GoogleFonts.jost(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: CitadelColors.textSecondary,
+          letterSpacing: 0.5,
+        ),
       ),
+    );
+  }
+
+  Widget _buildFieldLabelWithIcon(String label, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: CitadelColors.textMuted),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.jost(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: CitadelColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedField({required int index, required Widget child}) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 350 + (index * 80)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, widget) => Opacity(
+        opacity: value.clamp(0.0, 1.0),
+        child: Transform.translate(
+          offset: Offset(0, 12 * (1 - value)),
+          child: widget,
+        ),
+      ),
+      child: child,
     );
   }
 
@@ -383,57 +632,192 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: CitadelColors.primary),
+        borderSide: const BorderSide(color: CitadelColors.primary, width: 1.5),
       ),
     );
   }
 
-  Widget _buildReviewSection(String title, List<Widget> rows) {
+  Widget _buildReviewCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required List<_ReviewItem> items,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: CitadelColors.surfaceLight,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: CitadelColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.jost(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: CitadelColors.primary,
+          // Card header
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: GoogleFonts.jost(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: CitadelColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          ...rows,
+          // Items
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Column(
+              children: items.map((item) => _buildReviewRow(item)).toList(),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _reviewRow(String label, String value) {
+  Widget _buildReviewRow(_ReviewItem item) {
+    final isNA = item.value == 'N/A';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Icon(item.icon, size: 15, color: isNA ? CitadelColors.textMuted : CitadelColors.textSecondary),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 140,
-            child: Text(
-              label,
-              style: GoogleFonts.jost(fontSize: 13, color: CitadelColors.textMuted),
+            width: 130,
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    item.label,
+                    style: GoogleFonts.jost(
+                      fontSize: 12,
+                      color: CitadelColors.textMuted,
+                    ),
+                  ),
+                ),
+                if (!item.required)
+                  Container(
+                    margin: const EdgeInsets.only(left: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: CitadelColors.textMuted.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'optional',
+                      style: GoogleFonts.jost(fontSize: 8, color: CitadelColors.textMuted),
+                    ),
+                  ),
+              ],
             ),
           ),
           Expanded(
             child: Text(
-              value,
+              item.value,
+              textAlign: TextAlign.end,
               style: GoogleFonts.jost(
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: CitadelColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                color: isNA ? CitadelColors.textMuted : CitadelColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomBar() {
+    final canProceed = _currentStep == 0 ? _isStepValid : true;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: CitadelColors.surface,
+        border: Border(top: BorderSide(color: CitadelColors.border)),
+      ),
+      child: Row(
+        children: [
+          if (_currentStep > 0)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _prevStep,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: CitadelColors.primary,
+                  side: const BorderSide(color: CitadelColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_back_ios_new, size: 14),
+                    const SizedBox(width: 6),
+                    Text('Back', style: GoogleFonts.jost(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          if (_currentStep > 0) const SizedBox(width: 12),
+          Expanded(
+            flex: _currentStep > 0 ? 2 : 1,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: ElevatedButton(
+                onPressed: _currentStep == 1
+                    ? (_submitting ? null : _submitOrder)
+                    : (canProceed ? _nextStep : null),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CitadelColors.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: CitadelColors.primary.withValues(alpha: 0.4),
+                  disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: canProceed ? 2 : 0,
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _currentStep == 1 ? 'Submit Application' : 'Continue',
+                            style: GoogleFonts.jost(fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                          if (_currentStep == 0) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.arrow_forward_ios, size: 14),
+                          ],
+                          if (_currentStep == 1) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.send_rounded, size: 16),
+                          ],
+                        ],
+                      ),
               ),
             ),
           ),
@@ -443,6 +827,23 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen> {
   }
 }
 
+// ── Review item model ──
+
+class _ReviewItem {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool required;
+  const _ReviewItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.required = true,
+  });
+}
+
+// ── Step indicator ──
+
 class _StepIndicator extends StatelessWidget {
   final int currentStep;
   const _StepIndicator({required this.currentStep});
@@ -450,6 +851,7 @@ class _StepIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['Trust Info', 'Review'];
+    const icons = [Icons.edit_note_rounded, Icons.fact_check_outlined];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
@@ -459,48 +861,60 @@ class _StepIndicator extends StatelessWidget {
           return Expanded(
             child: Row(
               children: [
-                Column(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: isActive ? CitadelColors.primary : CitadelColors.surfaceLight,
-                        shape: BoxShape.circle,
-                        border: isCurrent
-                            ? Border.all(color: CitadelColors.primaryLight, width: 2)
-                            : null,
-                      ),
-                      child: Center(
-                        child: isActive
-                            ? Icon(Icons.check, color: Colors.white, size: 16)
-                            : Text(
-                                '${i + 1}',
-                                style: GoogleFonts.jost(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? CitadelColors.primary.withValues(alpha: isCurrent ? 0.15 : 0.08)
+                          : CitadelColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(10),
+                      border: isCurrent
+                          ? Border.all(color: CitadelColors.primary, width: 1.5)
+                          : isActive
+                              ? Border.all(color: CitadelColors.primary.withValues(alpha: 0.3))
+                              : Border.all(color: CitadelColors.border),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: isActive
+                              ? Icon(icons[i],
+                                  key: const ValueKey('active'),
+                                  color: CitadelColors.primary,
+                                  size: 16)
+                              : Icon(icons[i],
+                                  key: const ValueKey('inactive'),
                                   color: CitadelColors.textMuted,
-                                ),
-                              ),
-                      ),
+                                  size: 16),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            labels[i],
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.jost(
+                              fontSize: 12,
+                              color: isActive ? CitadelColors.primary : CitadelColors.textMuted,
+                              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      labels[i],
-                      style: GoogleFonts.jost(
-                        fontSize: 10,
-                        color: isActive ? CitadelColors.primary : CitadelColors.textMuted,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 if (i < labels.length - 1)
-                  Expanded(
-                    child: Container(
-                      height: 2,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      color: i < currentStep ? CitadelColors.primary : CitadelColors.border,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(
+                      Icons.chevron_right,
+                      color: i < currentStep ? CitadelColors.primary : CitadelColors.textMuted,
+                      size: 18,
                     ),
                   ),
               ],

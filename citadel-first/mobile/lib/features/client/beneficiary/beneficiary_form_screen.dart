@@ -912,7 +912,7 @@ class _BeneficiaryFormScreenState extends State<BeneficiaryFormScreen> {
                 Text(label, style: GoogleFonts.jost(fontSize: 10, fontWeight: FontWeight.w500, color: CitadelColors.textMuted, letterSpacing: 0.3)),
                 const SizedBox(height: 1),
                 Text(
-                  value ?? '—',
+                  value ?? 'N/A',
                   style: GoogleFonts.jost(fontSize: 13, color: value != null ? CitadelColors.textPrimary : CitadelColors.textMuted),
                 ),
               ],
