@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +12,11 @@ from app.schemas.trust_order import (
     TrustOrderCreateRequest,
     TrustOrderListResponse,
     TrustOrderResponse,
+    TrustOrderUpdateRequest,
 )
 from app.schemas.user_details import PresignedUrlRequest, PresignedUrlResponse
 from app.services.s3_service import generate_presigned_download_url, generate_presigned_upload_url
+from app.services.kyc_automation_service import generate_and_email_kyc_forms, notify_trust_status
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ CWD_DECK_S3_KEY = "trust-products/cwd-trust-deck.pdf"
 )
 async def create_trust_order(
     body: TrustOrderCreateRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: AppUser = Depends(get_current_signup_user),
 ):
@@ -52,6 +55,14 @@ async def create_trust_order(
         current_user.id,
         record.id,
     )
+
+    # Schedule KYC form generation and email as a background task
+    background_tasks.add_task(
+        generate_and_email_kyc_forms,
+        app_user_id=current_user.id,
+        trust_order_id=record.id,
+    )
+
     return TrustOrderResponse.model_validate(record)
 
 
@@ -128,3 +139,63 @@ async def get_cwd_deck_url(
 ):
     download_url = generate_presigned_download_url(key=CWD_DECK_S3_KEY, expires_in=600)
     return {"download_url": download_url}
+
+
+@router.patch(
+    "/{order_id}/status",
+    response_model=TrustOrderResponse,
+    summary="Update trust order status",
+    description="Updates the case_status of a trust order and notifies the user. Used by Vanguard vendor to push status updates.",
+)
+async def update_trust_order_status(
+    order_id: int,
+    body: TrustOrderUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    result = await db.execute(
+        select(TrustOrder).where(
+            TrustOrder.id == order_id,
+            TrustOrder.app_user_id == current_user.id,
+            TrustOrder.is_deleted == False,
+        )
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trust order not found.")
+
+    old_status = record.case_status
+
+    # Apply updates
+    if body.case_status is not None:
+        record.case_status = body.case_status
+    if body.kyc_status is not None:
+        record.kyc_status = body.kyc_status
+    if body.trust_reference_id is not None:
+        record.trust_reference_id = body.trust_reference_id
+    if body.deferment_remark is not None:
+        record.deferment_remark = body.deferment_remark
+    if body.advisor_code is not None:
+        record.advisor_code = body.advisor_code
+    if body.commencement_date is not None:
+        record.commencement_date = body.commencement_date
+    if body.trust_period_ending_date is not None:
+        record.trust_period_ending_date = body.trust_period_ending_date
+    if body.irrevocable_termination_notice_date is not None:
+        record.irrevocable_termination_notice_date = body.irrevocable_termination_notice_date
+    if body.auto_renewal_date is not None:
+        record.auto_renewal_date = body.auto_renewal_date
+
+    await db.commit()
+    await db.refresh(record)
+
+    # If case_status changed, send notification to user
+    if body.case_status is not None and body.case_status != old_status:
+        await notify_trust_status(
+            db=db,
+            app_user_id=current_user.id,
+            status=body.case_status,
+            trust_order_id=order_id,
+        )
+
+    return TrustOrderResponse.model_validate(record)

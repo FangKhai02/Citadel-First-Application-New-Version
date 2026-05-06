@@ -131,3 +131,57 @@ async def send_kyc_forms_email(
     except Exception:
         logger.exception("Failed to send KYC forms email to %s", to_email)
         raise
+
+
+async def send_trust_status_email(
+    to_email: str,
+    client_name: str,
+    status_label: str,
+    message: str,
+    extra_info: str | None = None,
+    show_contact_button: bool = False,
+) -> None:
+    """Send a trust application status update email to the user.
+
+    Args:
+        to_email: Recipient email address (the user).
+        client_name: Client name for personalization.
+        status_label: Human-readable status label (e.g., "Pending Review").
+        message: Main body message.
+        extra_info: Optional additional info (e.g., next steps).
+        show_contact_button: Show "Contact Customer Support" button (for REJECTED).
+    """
+    template = _jinja_env.get_template("trust_status_email.html")
+    html_body = template.render(
+        client_name=client_name,
+        status_label=status_label,
+        message=message,
+        extra_info=extra_info or "",
+        show_contact_button=show_contact_button,
+    )
+
+    payload = {
+        "from": settings.EMAIL_FROM,
+        "to": [to_email],
+        "subject": f"Trust Application Update — {status_label}",
+        "html": html_body,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                "https://api.resend.com/emails",
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            logger.info(
+                "Trust status email sent to %s (status=%s, resend_id=%s)",
+                to_email, status_label, response.json().get("id"),
+            )
+    except Exception:
+        logger.exception("Failed to send trust status email to %s", to_email)
+        raise

@@ -12,6 +12,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.user_details import UserDetails
 from app.schemas.vtb_kyc import (

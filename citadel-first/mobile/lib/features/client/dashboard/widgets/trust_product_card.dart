@@ -21,13 +21,27 @@ class TrustProductCard extends StatefulWidget {
   State<TrustProductCard> createState() => _TrustProductCardState();
 }
 
-class _TrustProductCardState extends State<TrustProductCard> {
+class _TrustProductCardState extends State<TrustProductCard> with WidgetsBindingObserver {
   TrustOrder? _latestOrder;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchTrustOrder();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _fetchTrustOrder();
+    }
   }
 
   Future<void> _fetchTrustOrder() async {
@@ -75,11 +89,11 @@ class _TrustProductCardState extends State<TrustProductCard> {
             Image.asset(
               'assets/images/Vanguard Trust Fund Photo.png',
               width: double.infinity,
-              height: 220,
+              height: 160,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
                 width: double.infinity,
-                height: 220,
+                height: 160,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [CitadelColors.primaryDark, CitadelColors.surface],
@@ -92,7 +106,7 @@ class _TrustProductCardState extends State<TrustProductCard> {
             // Dark overlay for text readability
             Container(
               width: double.infinity,
-              height: 220,
+              height: 160,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -117,20 +131,20 @@ class _TrustProductCardState extends State<TrustProductCard> {
               left: 0,
               right: 0,
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Citadel Wealth\nDiversification Trust',
                       style: GoogleFonts.jost(
-                        fontSize: 20,
+                        fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                         height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       'Vanguard Trustee Berhad',
                       style: GoogleFonts.jost(
@@ -138,7 +152,7 @@ class _TrustProductCardState extends State<TrustProductCard> {
                         color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     if (_latestOrder != null)
                       _buildStatusActions()
                     else

@@ -207,6 +207,7 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
             onRefresh: () async {
               context.read<AuthBloc>().add(const AuthCheckRequested());
               await _fetchBeneficiaryProgress();
+              if (mounted) setState(() => _trustRefreshKey++);
             },
             child: SafeArea(
               child: SingleChildScrollView(

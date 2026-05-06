@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Email (Resend)
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "Citadel <onboarding@resend.dev>"
+    VTB_KYC_INTERNAL_EMAIL: str = ""  # Internal email for auto KYC delivery
     VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
     # Public-facing URL used for verification links
