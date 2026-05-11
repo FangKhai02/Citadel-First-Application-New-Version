@@ -1,3 +1,4 @@
+import base64
 import logging
 from pathlib import Path
 
@@ -15,9 +16,20 @@ _jinja_env = Environment(
     autoescape=True,
 )
 
+# Pre-encode logo as base64 data URI so it renders in any email client
+# (localhost URLs are unreachable from mobile Gmail, Outlook, etc.)
+_LOGO_FILE = Path(__file__).resolve().parent.parent / "static" / "citadel-logo.png"
+_LOGO_DATA_URI = ""
+if _LOGO_FILE.exists():
+    _LOGO_DATA_URI = f"data:image/png;base64,{base64.b64encode(_LOGO_FILE.read_bytes()).decode('utf-8')}"
+
 
 def _logo_url() -> str:
     return f"{settings.BACKEND_URL}/static/citadel-logo.png"
+
+
+def _logo_data_uri() -> str:
+    return _LOGO_DATA_URI
 
 
 async def send_verification_email(to_email: str, token: str) -> None:
@@ -28,7 +40,7 @@ async def send_verification_email(to_email: str, token: str) -> None:
     template = _jinja_env.get_template("verification_email.html")
     html_body = template.render(
         verification_url=verification_url,
-        logo_url=_logo_url(),
+        logo_url=_logo_data_uri(),
     )
 
     payload = {
@@ -89,7 +101,7 @@ async def send_kyc_forms_email(
     html_body = template.render(
         client_name=client_name,
         forms=forms_list,
-        logo_url=_logo_url(),
+        logo_url=_logo_data_uri(),
     )
 
     # Encode attachments as base64 for Resend API
@@ -158,6 +170,7 @@ async def send_trust_status_email(
         message=message,
         extra_info=extra_info or "",
         show_contact_button=show_contact_button,
+        logo_url=_logo_data_uri(),
     )
 
     payload = {

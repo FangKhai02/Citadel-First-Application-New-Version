@@ -63,3 +63,7 @@ citadel-first/SQL Script (Old Vendor)/
 
 # Coverage
 coverage/
+
+# Generated test output and debug files
+citadel-first/backend/test_output/
+citadel-first/backend/test_pdfs/

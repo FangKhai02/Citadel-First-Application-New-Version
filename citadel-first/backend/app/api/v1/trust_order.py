@@ -7,8 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.signup import get_current_signup_user
 from app.core.database import get_db
 from app.models.trust_order import TrustOrder
+from app.models.trust_portfolio import TrustPortfolio
 from app.models.user import AppUser
 from app.schemas.trust_order import (
+    PaymentStatusUpdateRequest,
     TrustOrderCreateRequest,
     TrustOrderListResponse,
     TrustOrderResponse,
@@ -198,4 +200,99 @@ async def update_trust_order_status(
             trust_order_id=order_id,
         )
 
+    # Auto-create portfolio when order is approved
+    if body.case_status == "APPROVED" and old_status != "APPROVED":
+        existing_portfolio = await db.execute(
+            select(TrustPortfolio).where(TrustPortfolio.trust_order_id == order_id)
+        )
+        if not existing_portfolio.scalar_one_or_none():
+            # Calculate maturity date from commencement + tenure if available
+            maturity_date = None
+            if record.commencement_date:
+                from dateutil.relativedelta import relativedelta
+                # Default tenure of 12 months if not specified
+                tenure_months = 12
+                maturity_date = record.commencement_date + relativedelta(months=tenure_months)
+
+            portfolio = TrustPortfolio(
+                app_user_id=current_user.id,
+                trust_order_id=order_id,
+                product_name="CWD Trust",
+                product_code="CWD",
+                status="PENDING_PAYMENT",
+                payment_status="PENDING",
+            )
+            if maturity_date:
+                portfolio.maturity_date = maturity_date
+            db.add(portfolio)
+            await db.commit()
+            logger.info(
+                "PORTFOLIO_AUTO_CREATED order_id=%d user_id=%d portfolio_id=%d",
+                order_id,
+                current_user.id,
+                portfolio.id,
+            )
+
     return TrustOrderResponse.model_validate(record)
+
+
+@router.patch(
+    "/{order_id}/payment-status",
+    summary="Update payment status",
+    description="Updates the payment_status of the portfolio linked to this order. Used by Vanguard to verify or reject payment. When payment_status is set to SUCCESS, the portfolio status automatically changes to ACTIVE.",
+)
+async def update_payment_status(
+    order_id: int,
+    body: PaymentStatusUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: AppUser = Depends(get_current_signup_user),
+):
+    # Verify the trust order exists and belongs to the user
+    result = await db.execute(
+        select(TrustOrder).where(
+            TrustOrder.id == order_id,
+            TrustOrder.app_user_id == current_user.id,
+            TrustOrder.is_deleted == False,
+        )
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trust order not found.")
+
+    # Find the portfolio for this order
+    portfolio_result = await db.execute(
+        select(TrustPortfolio).where(TrustPortfolio.trust_order_id == order_id)
+    )
+    portfolio = portfolio_result.scalar_one_or_none()
+    if not portfolio:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No portfolio found for this trust order.",
+        )
+
+    new_status = body.payment_status.upper()
+    if new_status not in ("SUCCESS", "FAILED"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="payment_status must be SUCCESS or FAILED.",
+        )
+
+    portfolio.payment_status = new_status
+
+    # When payment is verified, activate the portfolio
+    if new_status == "SUCCESS":
+        portfolio.status = "ACTIVE"
+
+    await db.commit()
+    await db.refresh(portfolio)
+
+    logger.info(
+        "PAYMENT_STATUS_UPDATED order_id=%d portfolio_id=%d payment_status=%s status=%s",
+        order_id, portfolio.id, new_status, portfolio.status,
+    )
+
+    return {
+        "message": f"Payment status updated to {new_status}.",
+        "payment_status": new_status,
+        "portfolio_status": portfolio.status,
+    }

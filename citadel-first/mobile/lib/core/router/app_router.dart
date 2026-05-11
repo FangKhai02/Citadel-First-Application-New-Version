@@ -31,6 +31,11 @@ import '../../features/client/profile/profile_screen.dart';
 import '../../features/client/trust/product/pdf_viewer_screen.dart';
 import '../../features/client/trust/purchase/trust_purchase_screen.dart';
 import '../../features/client/trust/purchase/trust_submission_success_screen.dart';
+import '../../features/client/portfolio/portfolio_screen.dart';
+import '../../features/client/portfolio/portfolio_detail_screen.dart';
+import '../../features/client/transactions/transaction_screen.dart';
+import '../../features/client/bank_details/bank_details_screen.dart';
+import '../../features/client/payment/payment_receipt_screen.dart';
 import '../../features/agent/dashboard/agent_dashboard_screen.dart';
 import '../../models/document_upload.dart';
 import '../../models/beneficiary.dart';
@@ -183,6 +188,18 @@ final appRouter = GoRouter(
     GoRoute(path: '/client/trust-product-detail', builder: (context, state) => const PdfViewerScreen()),
     GoRoute(path: '/client/trust-purchase', builder: (context, state) => const TrustPurchaseScreen()),
     GoRoute(path: '/client/trust-purchase-success', builder: (context, state) => const TrustSubmissionSuccessScreen()),
+    GoRoute(path: '/client/portfolio', builder: (context, state) => const PortfolioScreen()),
+    GoRoute(path: '/client/portfolio/:id', builder: (context, state) {
+      final id = int.parse(state.pathParameters['id']!);
+      return PortfolioDetailScreen(portfolioId: id);
+    }),
+    GoRoute(path: '/client/transactions', builder: (context, state) => const TransactionScreen()),
+    GoRoute(path: '/client/bank-details', builder: (context, state) => const BankDetailsScreen()),
+    GoRoute(path: '/client/payment-receipts/:orderId', builder: (context, state) {
+      final orderId = int.parse(state.pathParameters['orderId']!);
+      final paymentStatus = state.uri.queryParameters['paymentStatus'] ?? 'PENDING';
+      return PaymentReceiptScreen(orderId: orderId, paymentStatus: paymentStatus);
+    }),
     GoRoute(path: '/agent/dashboard', builder: (context, state) => const AgentDashboardScreen()),
   ],
 );

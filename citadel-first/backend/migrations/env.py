@@ -19,6 +19,10 @@ from app.models.crs_tax_residency import CrsTaxResidency  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
 from app.models.beneficiary import Beneficiary  # noqa: F401
 from app.models.trust_order import TrustOrder  # noqa: F401
+from app.models.trust_portfolio import TrustPortfolio  # noqa: F401
+from app.models.bank_details import BankDetails  # noqa: F401
+from app.models.trust_payment_receipt import TrustPaymentReceipt  # noqa: F401
+from app.models.trust_dividend_history import TrustDividendHistory  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

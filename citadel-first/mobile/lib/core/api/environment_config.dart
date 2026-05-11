@@ -7,6 +7,7 @@ class EnvironmentConfig {
 
   static const _urls = {
     Environment.local: 'http://88.88.1.22:8000/api/v1',
+    // Environment.local: 'http://192.168.0.17:8000/api/v1',
     Environment.staging: 'https://api-staging.citadelgroup.com.my/api/v1',
   };
 

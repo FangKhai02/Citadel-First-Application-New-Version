@@ -9,6 +9,9 @@ import '../../../core/auth/auth_bloc.dart';
 import '../../../core/auth/auth_event.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/theme/citadel_colors.dart';
+import '../../../models/transaction.dart';
+import '../../../models/trust_portfolio.dart';
+import '../../../services/portfolio_service.dart';
 import 'widgets/beneficiary_progress_section.dart';
 import 'widgets/greeting_bar.dart';
 import 'widgets/portfolio_section.dart';
@@ -31,6 +34,9 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
   bool _drawerOpen = false;
   int _trustRefreshKey = 0;
   BeneficiaryProgressData _beneficiaryProgress = const BeneficiaryProgressData();
+  final _portfolioService = PortfolioService();
+  List<TrustPortfolioDetail> _portfolios = [];
+  List<TransactionVo> _transactions = [];
 
   @override
   void initState() {
@@ -58,6 +64,7 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndShowBeneficiaryPrompt();
       _fetchBeneficiaryProgress();
+      _fetchDashboardData();
     });
   }
 
@@ -76,25 +83,33 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
           _beneficiaryProgress = BeneficiaryProgressData.fromApiResponse(res.data);
         });
       }
-    } catch (_) {
-      // Keep default zero-progress state — section still serves as CTA
+    } catch (e, st) {
+      debugPrint('❌ _fetchBeneficiaryProgress FAILED: $e');
+      debugPrint('$st');
+    }
+  }
+
+  Future<void> _fetchDashboardData() async {
+    try {
+      final results = await Future.wait([
+        _portfolioService.getMyPortfolios(),
+        _portfolioService.getMyTransactions(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _portfolios = results[0] as List<TrustPortfolioDetail>;
+          _transactions = results[1] as List<TransactionVo>;
+        });
+      }
+      debugPrint('✅ Dashboard data loaded: ${_portfolios.length} portfolios, ${_transactions.length} transactions');
+    } catch (e, st) {
+      debugPrint('❌ _fetchDashboardData FAILED: $e');
+      debugPrint('$st');
     }
   }
 
   void _openDrawer() => setState(() => _drawerOpen = true);
   void _closeDrawer() => setState(() => _drawerOpen = false);
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon!'),
-        backgroundColor: CitadelColors.surfaceLight,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
 
   Future<void> _navigateToBeneficiarySummary() async {
     await context.push('/client/beneficiary-summary');
@@ -206,7 +221,10 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
             backgroundColor: CitadelColors.surface,
             onRefresh: () async {
               context.read<AuthBloc>().add(const AuthCheckRequested());
-              await _fetchBeneficiaryProgress();
+              await Future.wait([
+                _fetchBeneficiaryProgress(),
+                _fetchDashboardData(),
+              ]);
               if (mounted) setState(() => _trustRefreshKey++);
             },
             child: SafeArea(
@@ -237,7 +255,10 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
                     _AnimatedSection(
                       animation: _fadeAnimations[2],
                       child: PortfolioSection(
-                        onViewMore: () => _showComingSoon('Portfolio'),
+                        portfolios: _portfolios,
+                        onViewMore: () => context.push('/client/portfolio'),
+                        onPortfolioTap: (id) =>
+                            context.push('/client/portfolio/$id'),
                       ),
                     ),
                     const SizedBox(height: 28),
@@ -260,7 +281,8 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
                     _AnimatedSection(
                       animation: _fadeAnimations[4],
                       child: TransactionSection(
-                        onViewMore: () => _showComingSoon('Activity'),
+                        transactions: _transactions.take(3).toList(),
+                        onViewMore: () => context.push('/client/transactions'),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -314,7 +336,7 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen>
             },
             onNavigatePortfolio: () {
               _closeDrawer();
-              _showComingSoon('Portfolio');
+              WidgetsBinding.instance.addPostFrameCallback((_) => context.push('/client/portfolio'));
             },
             onNavigateTrustProducts: () {
               _closeDrawer();

@@ -17,6 +17,11 @@ import app.models.face_verification  # noqa: F401  – registers FaceVerificatio
 import app.models.pep_declaration  # noqa: F401  – registers PepDeclaration
 import app.models.crs_tax_residency  # noqa: F401  – registers CrsTaxResidency
 import app.models.beneficiary  # noqa: F401  – registers Beneficiary
+import app.models.trust_order  # noqa: F401  – registers TrustOrder
+import app.models.trust_portfolio  # noqa: F401  – registers TrustPortfolio
+import app.models.trust_payment_receipt  # noqa: F401  – registers TrustPaymentReceipt
+import app.models.trust_dividend_history  # noqa: F401  – registers TrustDividendHistory
+import app.models.bank_details  # noqa: F401  – registers BankDetails
 
 logging.basicConfig(
     level=logging.INFO,

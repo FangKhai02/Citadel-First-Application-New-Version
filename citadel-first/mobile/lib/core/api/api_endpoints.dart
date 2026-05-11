@@ -57,4 +57,37 @@ class ApiEndpoints {
   static const String trustOrderMe = '/trust-orders/me';
   static const String trustOrderPresignedUrl = '/trust-orders/presigned-url';
   static const String trustProductCwdDeckUrl = '/trust-orders/products/cwd-deck-url';
+  static String trustOrderStatus(int orderId) => '/trust-orders/$orderId/status';
+
+  // Trust Portfolios
+  static const String portfolios = '/portfolios';
+  static const String portfoliosMe = '/portfolios/me';
+  static String portfolioDetail(int id) => '/portfolios/$id';
+
+  // Bank Details
+  static const String bankDetails = '/bank-details';
+  static const String bankDetailsMe = '/bank-details/me';
+  static String bankDetailUpdate(int id) => '/bank-details/$id';
+  static const String bankProofUploadUrl = '/bank-details/proof-upload-url';
+  static String bankProofDownloadUrl(int id) => '/bank-details/$id/proof-download-url';
+
+  // Portfolio Bank Linking
+  static String portfolioLinkBank(int id) => '/portfolios/$id/link-bank';
+  static String portfolioUnlinkBank(int id) => '/portfolios/$id/unlink-bank';
+
+  // Transactions
+  static const String transactionsMe = '/transactions/me';
+
+  // Dividends
+  static const String dividends = '/dividends';
+  static String dividendByPortfolio(int portfolioId) => '/dividends/portfolio/$portfolioId';
+  static String dividendStatus(int dividendId) => '/dividends/$dividendId/status';
+
+  // Payment Receipts
+  static String paymentReceiptUploadUrl(int orderId) => '/trust-orders/$orderId/payment-receipt/upload-url';
+  static String paymentReceiptConfirm(int orderId) => '/trust-orders/$orderId/payment-receipt/confirm';
+  static String paymentReceiptSubmit(int orderId) => '/trust-orders/$orderId/payment-receipt/submit';
+  static String paymentReceipts(int orderId) => '/trust-orders/$orderId/payment-receipts';
+  static String paymentReceiptDownloadUrl(int orderId, int receiptId) => '/trust-orders/$orderId/payment-receipts/$receiptId/download-url';
+  static String paymentReceiptDelete(int orderId, int receiptId) => '/trust-orders/$orderId/payment-receipts/$receiptId';
 }

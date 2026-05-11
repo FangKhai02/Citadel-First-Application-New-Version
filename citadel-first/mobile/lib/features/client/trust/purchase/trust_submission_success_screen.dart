@@ -42,7 +42,7 @@ class TrustSubmissionSuccessScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Vanguard Trustee Berhad is reviewing your application. Once approved, you will be notified and can proceed with trust placement.',
+                'Vanguard Trustee Berhad will be reviewing your application soon. Once approved, you will be notified and can proceed with the trust placement.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.jost(
                   fontSize: 14,

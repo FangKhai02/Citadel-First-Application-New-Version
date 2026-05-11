@@ -67,3 +67,7 @@ class TrustOrderResponse(BaseModel):
 
 class TrustOrderListResponse(BaseModel):
     orders: list[TrustOrderResponse]
+
+
+class PaymentStatusUpdateRequest(BaseModel):
+    payment_status: str  # "SUCCESS" or "FAILED"

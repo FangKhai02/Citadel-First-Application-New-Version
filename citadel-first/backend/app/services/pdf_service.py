@@ -5,7 +5,6 @@ from io import BytesIO
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
-from xhtml2pdf import pisa
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +34,7 @@ def generate_onboarding_agreement_pdf(
     )
 
     pdf_buffer = BytesIO()
+    from xhtml2pdf import pisa
     pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
 
     if pisa_status.err:

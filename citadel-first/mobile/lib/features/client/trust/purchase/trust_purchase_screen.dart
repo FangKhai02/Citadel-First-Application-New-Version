@@ -182,7 +182,6 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
               ],
             ),
           ),
-          _buildBottomBar(),
         ],
       ),
     );
@@ -438,6 +437,10 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
               ),
             ),
             const SizedBox(height: 20),
+            // Continue button (scrolls with content, clears Android nav bar)
+            _buildContinueButton(),
+            // Bottom safe area for Android navigation bar
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         ),
       ),
@@ -560,6 +563,10 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            // Submit button (scrolls with content, clears Android nav bar)
+            _buildSubmitButton(),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -747,81 +754,60 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
     );
   }
 
-  Widget _buildBottomBar() {
-    final canProceed = _currentStep == 0 ? _isStepValid : true;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: CitadelColors.surface,
-        border: Border(top: BorderSide(color: CitadelColors.border)),
+  Widget _buildContinueButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isStepValid ? _nextStep : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: CitadelColors.primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: CitadelColors.primary.withValues(alpha: 0.4),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: _isStepValid ? 2 : 0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Continue', style: GoogleFonts.jost(fontWeight: FontWeight.w600, fontSize: 15)),
+            const SizedBox(width: 6),
+            const Icon(Icons.arrow_forward_ios, size: 14),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          if (_currentStep > 0)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _prevStep,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: CitadelColors.primary,
-                  side: const BorderSide(color: CitadelColors.primary),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.arrow_back_ios_new, size: 14),
-                    const SizedBox(width: 6),
-                    Text('Back', style: GoogleFonts.jost(fontWeight: FontWeight.w600)),
-                  ],
-                ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _submitting ? null : _submitOrder,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: CitadelColors.primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: CitadelColors.primary.withValues(alpha: 0.4),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+        ),
+        child: _submitting
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Submit Application', style: GoogleFonts.jost(fontWeight: FontWeight.w600, fontSize: 15)),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.send_rounded, size: 16),
+                ],
               ),
-            ),
-          if (_currentStep > 0) const SizedBox(width: 12),
-          Expanded(
-            flex: _currentStep > 0 ? 2 : 1,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              child: ElevatedButton(
-                onPressed: _currentStep == 1
-                    ? (_submitting ? null : _submitOrder)
-                    : (canProceed ? _nextStep : null),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CitadelColors.primary,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: CitadelColors.primary.withValues(alpha: 0.4),
-                  disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: canProceed ? 2 : 0,
-                ),
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _currentStep == 1 ? 'Submit Application' : 'Continue',
-                            style: GoogleFonts.jost(fontWeight: FontWeight.w600, fontSize: 15),
-                          ),
-                          if (_currentStep == 0) ...[
-                            const SizedBox(width: 6),
-                            const Icon(Icons.arrow_forward_ios, size: 14),
-                          ],
-                          if (_currentStep == 1) ...[
-                            const SizedBox(width: 6),
-                            const Icon(Icons.send_rounded, size: 16),
-                          ],
-                        ],
-                      ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -855,72 +841,64 @@ class _StepIndicator extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
-        children: List.generate(labels.length, (i) {
-          final isActive = i <= currentStep;
-          final isCurrent = i == currentStep;
-          return Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? CitadelColors.primary.withValues(alpha: isCurrent ? 0.15 : 0.08)
-                          : CitadelColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(10),
-                      border: isCurrent
-                          ? Border.all(color: CitadelColors.primary, width: 1.5)
-                          : isActive
-                              ? Border.all(color: CitadelColors.primary.withValues(alpha: 0.3))
-                              : Border.all(color: CitadelColors.border),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          child: isActive
-                              ? Icon(icons[i],
-                                  key: const ValueKey('active'),
-                                  color: CitadelColors.primary,
-                                  size: 16)
-                              : Icon(icons[i],
-                                  key: const ValueKey('inactive'),
-                                  color: CitadelColors.textMuted,
-                                  size: 16),
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            labels[i],
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.jost(
-                              fontSize: 12,
-                              color: isActive ? CitadelColors.primary : CitadelColors.textMuted,
-                              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (i < labels.length - 1)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(
-                      Icons.chevron_right,
-                      color: i < currentStep ? CitadelColors.primary : CitadelColors.textMuted,
-                      size: 18,
-                    ),
-                  ),
-              ],
+        children: [
+          // Step 1
+          Expanded(child: _buildStep(labels[0], icons[0], 0)),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Icon(Icons.chevron_right, color: CitadelColors.textMuted, size: 18),
+          ),
+          // Step 2
+          Expanded(child: _buildStep(labels[1], icons[1], 1)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep(String label, IconData icon, int step) {
+    final isActive = step <= currentStep;
+    final isCurrent = step == currentStep;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isActive
+            ? CitadelColors.primary.withValues(alpha: isCurrent ? 0.15 : 0.08)
+            : CitadelColors.surfaceLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isCurrent
+              ? CitadelColors.primary
+              : isActive
+                  ? CitadelColors.primary.withValues(alpha: 0.3)
+                  : CitadelColors.border,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: isActive
+                ? Icon(icon, key: const ValueKey('active'), color: CitadelColors.primary, size: 16)
+                : Icon(icon, key: const ValueKey('inactive'), color: CitadelColors.textMuted, size: 16),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.jost(
+                fontSize: 12,
+                color: isActive ? CitadelColors.primary : CitadelColors.textMuted,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              ),
             ),
-          );
-        }),
+          ),
+        ],
       ),
     );
   }
