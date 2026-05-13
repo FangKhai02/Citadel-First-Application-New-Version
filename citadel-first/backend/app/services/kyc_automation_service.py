@@ -173,6 +173,21 @@ async def generate_and_email_kyc_forms(
                 trust_order_id=trust_order_id,
             )
 
+            # 7. Submit to Lark Bitable (failure is logged but does not block email/S3)
+            try:
+                from app.services.lark_service import submit_kyc_to_lark
+
+                await submit_kyc_to_lark(
+                    data=data,
+                    pdfs=pdfs,
+                    trust_order_id=trust_order_id,
+                )
+            except Exception:
+                logger.exception(
+                    "Lark submission failed for order_id=%d; email and S3 uploads unaffected",
+                    trust_order_id,
+                )
+
     except Exception:
         logger.exception(
             "KYC automation failed unexpectedly for user_id=%d order_id=%d",

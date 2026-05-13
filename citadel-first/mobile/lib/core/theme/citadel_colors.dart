@@ -28,6 +28,13 @@ class CitadelColors {
   static const Color border = Color(0xFF1E3A5F);
   static const Color divider = Color(0xFF1E3A5F);
 
+  // Text (additional)
+  static const Color textBody = Color(0xFFCBD5E1);
+
+  // CTA Button Gradient
+  static const Color ctaGradientTop = Color(0xFF2E6DA4);
+  static const Color ctaGradientBottom = Color(0xFF1B4F7A);
+
   // Card
   static const Color cardBackground = Color(0xFF0F172A);
   static const Color cardBorder = Color(0xFF1E3A5F);

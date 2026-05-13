@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:citadel_first/core/theme/citadel_colors.dart';
 
 const _gold      = Color(0xFFCA8A04);
-const _textMuted = Color(0xFF78716C);
 const _trackDim  = Color(0xFF44403C);
 
 class SignupProgressBar extends StatelessWidget {
@@ -55,8 +55,8 @@ class SignupProgressBar extends StatelessWidget {
                     color: i == currentStep
                         ? _gold
                         : i < currentStep
-                            ? _textMuted
-                            : _textMuted.withAlpha(90),
+                            ? CitadelColors.textMuted
+                            : CitadelColors.textMuted.withAlpha(90),
                     letterSpacing: 0.3,
                   ),
                 ),

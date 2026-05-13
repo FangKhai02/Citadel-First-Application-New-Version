@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
 import '../../../../core/theme/citadel_colors.dart';
+import '../../../../models/beneficiary.dart';
 
 class TrustPurchaseScreen extends StatefulWidget {
   const TrustPurchaseScreen({super.key});
@@ -117,7 +119,39 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
   Future<void> _submitOrder() async {
     setState(() => _submitting = true);
     try {
+      // Check beneficiary requirements before submitting
       final api = ApiClient();
+      final benResponse = await api.get(ApiEndpoints.beneficiaries);
+      final benData = BeneficiaryListResult.fromJson(benResponse.data as Map<String, dynamic>);
+      final beneficiaries = benData.beneficiaries;
+
+      final preDemise = beneficiaries.where((b) => b.isPreDemise).toList();
+      final postDemise = beneficiaries.where((b) => b.isPostDemise).toList();
+      final preTotal = preDemise.fold(0.0, (sum, b) => sum + (b.sharePercentage ?? 0));
+      final postTotal = postDemise.fold(0.0, (sum, b) => sum + (b.sharePercentage ?? 0));
+
+      final List<String> errors = [];
+      if (preDemise.isEmpty) {
+        errors.add('at least 1 pre-demise beneficiary');
+      }
+      if (postDemise.isEmpty) {
+        errors.add('at least 1 post-demise beneficiary');
+      }
+      if (preDemise.isNotEmpty && (preTotal - 100.0).abs() > 0.01) {
+        errors.add('pre-demise share percentage to total 100% (currently ${preTotal.toStringAsFixed(1)}%)');
+      }
+      if (postDemise.isNotEmpty && (postTotal - 100.0).abs() > 0.01) {
+        errors.add('post-demise share percentage to total 100% (currently ${postTotal.toStringAsFixed(1)}%)');
+      }
+
+      if (errors.isNotEmpty) {
+        if (mounted) {
+          setState(() => _submitting = false);
+          _showBeneficiaryError(errors);
+        }
+        return;
+      }
+
       await api.post(
         ApiEndpoints.trustOrders,
         data: {
@@ -131,6 +165,28 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
       );
       if (mounted) {
         context.go('/client/trust-purchase-success');
+      }
+    } on DioException catch (e) {
+      // Backend 400 error (beneficiary validation failed on server side)
+      if (mounted && e.response?.statusCode == 400) {
+        setState(() => _submitting = false);
+        final detail = e.response?.data;
+        String message;
+        if (detail is Map<String, dynamic> && detail['detail'] != null) {
+          message = detail['detail'].toString();
+        } else {
+          message = 'Beneficiary requirements not met. Please check your beneficiaries.';
+        }
+        _showBeneficiaryErrorFromBackend(message);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Submission failed. Please try again.'),
+            backgroundColor: CitadelColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -146,6 +202,104 @@ class _TrustPurchaseScreenState extends State<TrustPurchaseScreen>
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  void _showBeneficiaryError(List<String> errors) {
+    final missing = <String>[];
+    final percentage = <String>[];
+    for (final e in errors) {
+      if (e.contains('beneficiary')) {
+        missing.add(e);
+      } else {
+        percentage.add(e);
+      }
+    }
+
+    String message = '';
+    if (missing.isNotEmpty) {
+      message += 'Please add ${missing.join(' and ')} before purchasing the trust product.';
+    }
+    if (percentage.isNotEmpty) {
+      if (message.isNotEmpty) message += '\n\n';
+      message += 'Please ensure that ${percentage.join(' and ')}.';
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: CitadelColors.warning, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Beneficiary Incomplete', style: GoogleFonts.jost(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+        content: Text(message, style: GoogleFonts.jost(fontSize: 14, height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.jost(color: CitadelColors.textMuted)),
+          ),
+          Flexible(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.push('/client/beneficiary-summary');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CitadelColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text('Add Beneficiaries', style: GoogleFonts.jost(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBeneficiaryErrorFromBackend(String errorDetail) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: CitadelColors.warning, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Beneficiary Incomplete', style: GoogleFonts.jost(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+        content: Text(
+          errorDetail.replaceAll('. ', '.\n\n'),
+          style: GoogleFonts.jost(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.jost(color: CitadelColors.textMuted)),
+          ),
+          Flexible(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.push('/client/beneficiary-summary');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CitadelColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text('Add Beneficiaries', style: GoogleFonts.jost(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

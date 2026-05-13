@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.signup import get_current_signup_user
 from app.core.database import get_db
+from app.models.beneficiary import Beneficiary
 from app.models.trust_order import TrustOrder
 from app.models.trust_portfolio import TrustPortfolio
 from app.models.user import AppUser
@@ -39,6 +40,33 @@ async def create_trust_order(
     db: AsyncSession = Depends(get_db),
     current_user: AppUser = Depends(get_current_signup_user),
 ):
+    # ── Validate beneficiary requirements ──
+    ben_result = await db.execute(
+        select(Beneficiary).where(
+            Beneficiary.app_user_id == current_user.id,
+            Beneficiary.is_deleted == False,
+        )
+    )
+    beneficiaries = list(ben_result.scalars().all())
+
+    pre_demise = [b for b in beneficiaries if b.beneficiary_type == "pre_demise"]
+    post_demise = [b for b in beneficiaries if b.beneficiary_type == "post_demise"]
+    pre_total = sum(float(b.share_percentage or 0) for b in pre_demise)
+    post_total = sum(float(b.share_percentage or 0) for b in post_demise)
+
+    errors = []
+    if not pre_demise:
+        errors.append("At least 1 pre-demise beneficiary is required")
+    if not post_demise:
+        errors.append("At least 1 post-demise beneficiary is required")
+    if pre_demise and abs(pre_total - 100.0) > 0.01:
+        errors.append(f"Pre-demise share percentage must total 100% (currently {pre_total:.1f}%)")
+    if post_demise and abs(post_total - 100.0) > 0.01:
+        errors.append(f"Post-demise share percentage must total 100% (currently {post_total:.1f}%)")
+
+    if errors:
+        raise HTTPException(status_code=400, detail=". ".join(errors))
+
     record = TrustOrder(
         app_user_id=current_user.id,
         date_of_trust_deed=body.date_of_trust_deed,

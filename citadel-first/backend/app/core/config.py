@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     # Public-facing URL used for verification links
     BACKEND_URL: str = "http://localhost:8000"
 
+    # Lark (Bitable) API — Vanguard integration
+    LARK_APP_ID: str = ""
+    LARK_APP_SECRET: str = ""
+    LARK_BITABLE_APP_TOKEN: str = ""
+    LARK_API_BASE_URL: str = "https://open.larksuite.com/open-apis"
+
+    # Vanguard API key — for B2B push endpoints
+    VANGUARD_API_KEY: str = ""
+
     model_config = {"env_file": ".env"}
 
 

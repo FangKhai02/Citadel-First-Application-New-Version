@@ -1,4 +1,4 @@
-"""alter notifications table to match new schema
+"""add notifications table
 
 Revision ID: i2j3k4l5m6n7
 Revises: h1i2j3k4l5m6
@@ -15,72 +15,61 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Rename camelCase columns to snake_case
-    op.alter_column("notifications", "hasRead", new_column_name="is_read")
-    op.alter_column("notifications", "createdAt", new_column_name="created_at")
-
-    # Change is_read from smallint to integer and set default
-    op.alter_column(
-        "notifications", "is_read",
-        type_=sa.Integer(),
-        existing_type=sa.SmallInteger(),
-        nullable=False,
-        server_default="0",
+    # Check if the notifications table already exists (from old vendor schema)
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='notifications'"
+        )
     )
+    notifications_exists = result.fetchone() is not None
 
-    # Change created_at from timestamp without tz to timestamp with tz
-    op.alter_column(
-        "notifications", "created_at",
-        type_=sa.DateTime(timezone=True),
-        existing_type=sa.DateTime(),
-        existing_server_default=None,
-        server_default=sa.func.now(),
-    )
+    if notifications_exists:
+        # Migrate from old vendor schema: rename camelCase columns
+        op.alter_column("notifications", "hasRead", new_column_name="is_read")
+        op.alter_column("notifications", "createdAt", new_column_name="created_at")
 
-    # Make title and message NOT NULL (add defaults first to handle any NULLs)
-    op.execute("UPDATE notifications SET title = '' WHERE title IS NULL")
-    op.execute("UPDATE notifications SET message = '' WHERE message IS NULL")
-    op.alter_column("notifications", "title", nullable=False)
-    op.alter_column("notifications", "message", nullable=False)
+        op.alter_column(
+            "notifications", "is_read",
+            type_=sa.Integer(),
+            existing_type=sa.SmallInteger(),
+            nullable=False,
+            server_default="0",
+        )
+        op.alter_column(
+            "notifications", "created_at",
+            type_=sa.DateTime(timezone=True),
+            existing_type=sa.DateTime(),
+            existing_server_default=None,
+            server_default=sa.func.now(),
+        )
 
-    # Drop unused columns
-    op.drop_column("notifications", "one_signal_notification_id")
-    op.drop_column("notifications", "imageUrl")
-    op.drop_column("notifications", "launchUrl")
+        op.execute("UPDATE notifications SET title = '' WHERE title IS NULL")
+        op.execute("UPDATE notifications SET message = '' WHERE message IS NULL")
+        op.alter_column("notifications", "title", nullable=False)
+        op.alter_column("notifications", "message", nullable=False)
 
-    # Drop old index on one_signal_notification_id (already dropped with column)
-    # Add new index on app_user_id if not already present (old table has one named "app_user_id")
-    # The existing index "app_user_id" on column app_user_id already exists, so no new index needed.
+        op.drop_column("notifications", "one_signal_notification_id")
+        op.drop_column("notifications", "imageUrl")
+        op.drop_column("notifications", "launchUrl")
+    else:
+        # Create fresh notifications table with the new schema
+        op.create_table(
+            "notifications",
+            sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+            sa.Column("app_user_id", sa.BigInteger(), nullable=False),
+            sa.Column("title", sa.String(255), nullable=False),
+            sa.Column("message", sa.String(500), nullable=False),
+            sa.Column("type", sa.String(50), nullable=False, server_default="info"),
+            sa.Column("is_read", sa.Integer(), nullable=False, server_default="0"),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+            sa.PrimaryKeyConstraint("id"),
+        )
+        op.create_index("ix_notifications_app_user_id", "notifications", ["app_user_id"])
 
 
 def downgrade() -> None:
-    # Re-add dropped columns
-    op.add_column("notifications", sa.Column("one_signal_notification_id", sa.String(255), nullable=True))
-    op.add_column("notifications", sa.Column("imageUrl", sa.String(500), nullable=True))
-    op.add_column("notifications", sa.Column("launchUrl", sa.String(500), nullable=True))
-
-    # Revert title and message to nullable
-    op.alter_column("notifications", "message", nullable=True)
-    op.alter_column("notifications", "title", nullable=True)
-
-    # Revert created_at to timestamp without tz
-    op.alter_column(
-        "notifications", "created_at",
-        type_=sa.DateTime(),
-        existing_type=sa.DateTime(timezone=True),
-        server_default=None,
-        existing_server_default=sa.func.now(),
-    )
-
-    # Revert is_read to smallint
-    op.alter_column(
-        "notifications", "is_read",
-        type_=sa.SmallInteger(),
-        existing_type=sa.Integer(),
-        nullable=True,
-        server_default=None,
-    )
-
-    # Rename back to camelCase
-    op.alter_column("notifications", "created_at", new_column_name="createdAt")
-    op.alter_column("notifications", "is_read", new_column_name="hasRead")
+    # Drop the notifications table entirely on downgrade
+    # (Old vendor data is not preserved on fresh installs)
+    op.drop_index("ix_notifications_app_user_id", table_name="notifications")
+    op.drop_table("notifications")

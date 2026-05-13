@@ -4,6 +4,7 @@ from app.api.v1 import (
     auth,
     bank_details,
     beneficiary,
+    lark_integration,
     notifications,
     signup,
     transaction,
@@ -12,6 +13,7 @@ from app.api.v1 import (
     trust_payment_receipt,
     trust_portfolio,
     users,
+    vanguard,
     vtb_kyc,
 )
 
@@ -28,3 +30,5 @@ router.include_router(bank_details.router)
 router.include_router(transaction.router)
 router.include_router(trust_dividend.router)
 router.include_router(trust_payment_receipt.router)
+router.include_router(lark_integration.router)
+router.include_router(vanguard.router)

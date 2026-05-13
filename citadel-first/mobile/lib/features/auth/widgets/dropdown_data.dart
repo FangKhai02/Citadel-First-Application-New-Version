@@ -78,25 +78,6 @@ const kNatureOfBusinessOptions = [
   'Other',
 ];
 
-// ── Annual Income ──
-const kAnnualIncomeOptions = [
-  'Below RM25,000',
-  'RM25,000 – RM50,000',
-  'RM50,000 – RM100,000',
-  'RM100,000 – RM250,000',
-  'RM250,000 – RM500,000',
-  'Above RM500,000',
-];
-
-// ── Estimated Net Worth ──
-const kNetWorthOptions = [
-  'Below RM100,000',
-  'RM100,000 – RM500,000',
-  'RM500,000 – RM1,000,000',
-  'RM1,000,000 – RM5,000,000',
-  'Above RM5,000,000',
-];
-
 // ── Source of Trust Fund ──
 const kSourceOfFundOptions = [
   'Salary',

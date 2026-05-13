@@ -61,6 +61,21 @@ def na_currency(value) -> str:
         return NA
 
 
+def na_income_or_worth(value: str | None) -> str:
+    """Format annual income or net worth for display.
+
+    Numeric strings like "75000" are formatted as "RM 75,000".
+    Legacy range strings like "RM50,000 - RM100,000" are returned as-is.
+    """
+    if value is None or value.strip() == "":
+        return NA
+    try:
+        amount = float(value.replace(",", ""))
+        return f"RM {amount:,.0f}"
+    except (TypeError, ValueError):
+        return value
+
+
 def _na_pct(value) -> str:
     """Format a share percentage value as 'X%' or N/A.
 
@@ -217,8 +232,8 @@ async def assemble_kyc_form_data(
         employer_name=na(ud.employer_name),
         employer_address=na(ud.employer_address),
         employer_telephone=na(ud.employer_telephone),
-        annual_income_range=na(ud.annual_income_range),
-        estimated_net_worth=na(ud.estimated_net_worth),
+        annual_income_range=na_income_or_worth(ud.annual_income_range),
+        estimated_net_worth=na_income_or_worth(ud.estimated_net_worth),
         source_of_trust_fund=na(ud.source_of_trust_fund),
         source_of_income=na(ud.source_of_income),
         country_of_birth=na(ud.country_of_birth),

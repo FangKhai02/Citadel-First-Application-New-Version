@@ -36,6 +36,12 @@ class TrustOrder(Base):
     projected_yield_schedule_key: Mapped[str | None] = mapped_column(String(500))
     acknowledgement_receipt_key: Mapped[str | None] = mapped_column(String(500))
 
+    # ── Lark (Bitable) integration status ──
+    lark_trust_record_id: Mapped[str | None] = mapped_column(String(100))
+    lark_submission_status: Mapped[str | None] = mapped_column(String(20), default="PENDING")
+    lark_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lark_error_message: Mapped[str | None] = mapped_column(Text)
+
     # ── Timestamps ──
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(

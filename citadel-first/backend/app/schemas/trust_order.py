@@ -61,6 +61,11 @@ class TrustOrderResponse(BaseModel):
     projected_yield_schedule_key: str | None
     acknowledgement_receipt_key: str | None
 
+    lark_trust_record_id: str | None
+    lark_submission_status: str | None
+    lark_submitted_at: datetime | None
+    lark_error_message: str | None
+
     created_at: datetime | None
     updated_at: datetime | None
 

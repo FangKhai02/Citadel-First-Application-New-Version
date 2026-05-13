@@ -19,13 +19,23 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # The existing bank_details.app_user_id FK points to users (admin table),
-    # but our app associates bank accounts with app_users.
-    # Drop the wrong FK — existing data has app_user_id referencing admin users table,
-    # so we can't add a new FK to app_users without cleaning up orphaned data first.
-    # We'll handle this relationship at the application level instead.
-    op.drop_constraint('bank_details_user_id_foreign', 'bank_details', type_='foreignkey')
+    # Drop the old FK from bank_details -> users (admin table) if it exists.
+    # On fresh installs this constraint won't exist, so skip gracefully.
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT 1 FROM information_schema.table_constraints "
+            "WHERE constraint_name = 'bank_details_user_id_foreign' "
+            "AND table_name = 'bank_details'"
+        )
+    )
+    if result.fetchone() is not None:
+        op.drop_constraint('bank_details_user_id_foreign', 'bank_details', type_='foreignkey')
 
 
 def downgrade() -> None:
-    op.create_foreign_key('bank_details_user_id_foreign', 'bank_details', 'users', ['app_user_id'], ['id'])
+    # Re-add FK only if bank_details has an app_user_id column referencing users
+    try:
+        op.create_foreign_key('bank_details_user_id_foreign', 'bank_details', 'users', ['app_user_id'], ['id'])
+    except Exception:
+        pass

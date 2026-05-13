@@ -4,8 +4,8 @@ Revision ID: k5l6m7n8o9p0
 Revises: j3k4l5m6n7o8
 Create Date: 2026-05-06 18:00:00.000000
 
-Note: bank_details table already exists from old vendor schema.
-This migration only creates the new tables that reference it.
+Note: bank_details table may already exist from old vendor schema.
+If it doesn't exist (fresh install), we create it here.
 
 """
 from alembic import op
@@ -18,7 +18,40 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # trust_portfolios table (references existing bank_details table)
+    # Create bank_details table if it doesn't exist (fresh installs)
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='bank_details'"
+        )
+    )
+    if result.fetchone() is None:
+        op.create_table(
+            "bank_details",
+            sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+            sa.Column("app_user_id", sa.BigInteger(), nullable=True),
+            sa.Column("individual_beneficiary_id", sa.BigInteger(), nullable=True),
+            sa.Column("corporate_shareholders_id", sa.BigInteger(), nullable=True),
+            sa.Column("bank_name", sa.String(255), nullable=True),
+            sa.Column("account_number", sa.String(255), nullable=True),
+            sa.Column("account_holder_name", sa.String(255), nullable=True),
+            sa.Column("bank_address", sa.String(255), nullable=True),
+            sa.Column("postcode", sa.String(255), nullable=True),
+            sa.Column("city", sa.String(255), nullable=True),
+            sa.Column("state", sa.String(255), nullable=True),
+            sa.Column("country", sa.String(255), nullable=True),
+            sa.Column("swift_code", sa.String(255), nullable=True),
+            sa.Column("bank_account_proof_key", sa.Text(), nullable=True),
+            sa.Column("is_deleted", sa.SmallInteger(), server_default="0", nullable=True),
+            sa.Column("agency_id", sa.BigInteger(), nullable=True),
+            sa.Column("corporate_client_id", sa.BigInteger(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), server_default=sa.func.now(), nullable=True),
+            sa.Column("updated_at", sa.DateTime(), nullable=True),
+            sa.PrimaryKeyConstraint("id"),
+        )
+        op.create_index("ix_bank_details_app_user_id", "bank_details", ["app_user_id"])
+
+    # trust_portfolios table
     op.create_table(
         "trust_portfolios",
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
