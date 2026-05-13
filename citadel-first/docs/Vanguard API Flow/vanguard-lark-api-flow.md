@@ -34,12 +34,12 @@ Trust Order Created ─────────► Background Task
 
 ## Lark API Credentials
 
-| Credential | Value | Source |
-|-----------|-------|--------|
-| App ID | `<LARK_APP_ID>` | Provided by Vanguard |
-| App Secret | `<LARK_APP_SECRET>` | Provided by Vanguard |
-| App Token | `<LARK_BITABLE_APP_TOKEN>` | Provided by Vanguard |
-| API Base URL | `https://open.larksuite.com/open-apis` | Lark documentation |
+| Credential | Env Variable | Source |
+|-----------|-------------|--------|
+| App ID | `LARK_APP_ID` | Provided by Vanguard, stored in `.env` |
+| App Secret | `LARK_APP_SECRET` | Provided by Vanguard, stored in `.env` |
+| App Token | `LARK_BITABLE_APP_TOKEN` | Provided by Vanguard, stored in `.env` |
+| API Base URL | `LARK_API_BASE_URL` | Defaults to `https://open.larksuite.com/open-apis` |
 
 These are stored in `.env` as `LARK_APP_ID`, `LARK_APP_SECRET`, `LARK_BITABLE_APP_TOKEN`, and `LARK_API_BASE_URL`.
 
